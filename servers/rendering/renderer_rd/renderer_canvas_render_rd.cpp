@@ -1722,7 +1722,7 @@ void RendererCanvasRenderRD::light_update_shadow(RID p_rid, int p_shadow_index, 
 
 		Rect2i rect((state.shadow_texture_size / 4) * i, p_shadow_index * 2, (state.shadow_texture_size / 4), 2);
 		RD::InitialAction initial_action = i == 0 ? RD::INITIAL_ACTION_CLEAR_REGION : RD::INITIAL_ACTION_CLEAR_REGION_CONTINUE;
-		RD::DrawListID draw_list = RD::get_singleton()->draw_list_begin(state.shadow_fb, initial_action, i != 3 ? RD::FINAL_ACTION_CONTINUE : RD::FINAL_ACTION_READ, initial_action, RD::FINAL_ACTION_DISCARD, cc, 1.0, 0, rect);
+		RD::DrawListID draw_list = RD::get_singleton()->draw_list_begin(state.shadow_fb, initial_action, i != 3 ? RD::FINAL_ACTION_CONTINUE : RD::FINAL_ACTION_READ, initial_action, RD::FINAL_ACTION_DISCARD, cc, ProjectSettings::get_singleton()->get_setting("rendering/renderer/reversed-z") ? 0.0 : 1.0, 0, rect);
 
 		Projection projection;
 		{
@@ -1811,7 +1811,7 @@ void RendererCanvasRenderRD::light_update_directional_shadow(RID p_rid, int p_sh
 	cc.push_back(Color(1, 1, 1, 1));
 
 	Rect2i rect(0, p_shadow_index * 2, state.shadow_texture_size, 2);
-	RD::DrawListID draw_list = RD::get_singleton()->draw_list_begin(state.shadow_fb, RD::INITIAL_ACTION_CLEAR_REGION, RD::FINAL_ACTION_READ, RD::INITIAL_ACTION_CLEAR_REGION, RD::FINAL_ACTION_DISCARD, cc, 1.0, 0, rect);
+	RD::DrawListID draw_list = RD::get_singleton()->draw_list_begin(state.shadow_fb, RD::INITIAL_ACTION_CLEAR_REGION, RD::FINAL_ACTION_READ, RD::INITIAL_ACTION_CLEAR_REGION, RD::FINAL_ACTION_DISCARD, cc, ProjectSettings::get_singleton()->get_setting("rendering/renderer/reversed-z") ? 0.0 : 1.0, 0, rect);
 
 	Projection projection;
 	projection.set_orthogonal(-half_size, half_size, -0.5, 0.5, 0.0, distance);

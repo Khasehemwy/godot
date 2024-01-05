@@ -282,7 +282,7 @@ void DebugEffects::draw_shadow_frustum(RID p_light, const Projection &p_cam_proj
 		// And draw our frustum.
 		RD::FramebufferFormatID fb_format_id = RD::get_singleton()->framebuffer_get_format(p_dest_fb);
 
-		RD::DrawListID draw_list = RD::get_singleton()->draw_list_begin(p_dest_fb, RD::INITIAL_ACTION_KEEP, RD::FINAL_ACTION_READ, RD::INITIAL_ACTION_KEEP, RD::FINAL_ACTION_DISCARD, Vector<Color>(), 1.0, 0, rect);
+		RD::DrawListID draw_list = RD::get_singleton()->draw_list_begin(p_dest_fb, RD::INITIAL_ACTION_KEEP, RD::FINAL_ACTION_READ, RD::INITIAL_ACTION_KEEP, RD::FINAL_ACTION_DISCARD, Vector<Color>(), ProjectSettings::get_singleton()->get_setting("rendering/renderer/reversed-z") ? 0.0 : 1.0, 0, rect);
 
 		RID pipeline = shadow_frustum.pipelines[SFP_TRANSPARENT].get_render_pipeline(frustum.vertex_format, fb_format_id);
 		RD::get_singleton()->draw_list_bind_render_pipeline(draw_list, pipeline);
@@ -326,7 +326,7 @@ void DebugEffects::draw_shadow_frustum(RID p_light, const Projection &p_cam_proj
 			rect.size.x *= atlas_rect_norm.size.x;
 			rect.size.y *= atlas_rect_norm.size.y;
 
-			draw_list = RD::get_singleton()->draw_list_begin(p_dest_fb, RD::INITIAL_ACTION_KEEP, RD::FINAL_ACTION_READ, RD::INITIAL_ACTION_KEEP, RD::FINAL_ACTION_DISCARD, Vector<Color>(), 1.0, 0, rect);
+			draw_list = RD::get_singleton()->draw_list_begin(p_dest_fb, RD::INITIAL_ACTION_KEEP, RD::FINAL_ACTION_READ, RD::INITIAL_ACTION_KEEP, RD::FINAL_ACTION_DISCARD, Vector<Color>(), ProjectSettings::get_singleton()->get_setting("rendering/renderer/reversed-z") ? 0.0 : 1.0, 0, rect);
 
 			pipeline = shadow_frustum.pipelines[SFP_TRANSPARENT].get_render_pipeline(frustum.vertex_format, fb_format_id);
 			RD::get_singleton()->draw_list_bind_render_pipeline(draw_list, pipeline);

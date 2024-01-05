@@ -102,6 +102,17 @@ void Projection::adjust_perspective_znear(real_t p_new_znear) {
 	columns[3][2] = -2 * znear * zfar / deltaZ;
 }
 
+void Projection::reverse_z_perspective() {
+	//Reversed-z on Vulkan coordinate system
+
+	real_t zfar = get_z_far();
+	real_t znear = get_z_near();
+	real_t deltaZ = zfar - znear;
+
+	columns[2][2] = -znear / deltaZ;
+	columns[3][2] = znear * zfar / deltaZ;
+}
+
 Projection Projection::create_depth_correction(bool p_flip_y) {
 	Projection proj;
 	proj.set_depth_correction(p_flip_y);
@@ -273,6 +284,9 @@ void Projection::set_perspective(real_t p_fovy_degrees, real_t p_aspect, real_t 
 	columns[2][3] = -1;
 	columns[3][2] = -2 * p_z_near * p_z_far / deltaZ;
 	columns[3][3] = 0;
+
+	// Both Opengl and Vulkan use the same Projection matrix, but they are different in Shader.
+	// Perhaps the modifications for different APIs are made to PROJECTION_MATRIX.
 }
 
 void Projection::set_perspective(real_t p_fovy_degrees, real_t p_aspect, real_t p_z_near, real_t p_z_far, bool p_flip_fov, int p_eye, real_t p_intraocular_dist, real_t p_convergence_dist) {

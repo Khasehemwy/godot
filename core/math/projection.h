@@ -80,6 +80,7 @@ struct _NO_DISCARD_ Projection {
 	void set_frustum(real_t p_left, real_t p_right, real_t p_bottom, real_t p_top, real_t p_near, real_t p_far);
 	void set_frustum(real_t p_size, real_t p_aspect, Vector2 p_offset, real_t p_near, real_t p_far, bool p_flip_fov = false);
 	void adjust_perspective_znear(real_t p_new_znear);
+	void reverse_z_perspective();
 
 	static Projection create_depth_correction(bool p_flip_y);
 	static Projection create_light_atlas_rect(const Rect2 &p_rect);

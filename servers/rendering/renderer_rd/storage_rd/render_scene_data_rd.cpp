@@ -33,6 +33,7 @@
 #include "servers/rendering/renderer_rd/storage_rd/light_storage.h"
 #include "servers/rendering/renderer_rd/storage_rd/texture_storage.h"
 #include "servers/rendering/rendering_server_default.h"
+#include "core/config/project_settings.h"
 
 RID RenderSceneDataRD::create_uniform_buffer() {
 	return RD::get_singleton()->uniform_buffer_create(sizeof(UBODATA));
@@ -48,10 +49,20 @@ void RenderSceneDataRD::update_ubo(RID p_uniform_buffer, RS::ViewportDebugDraw p
 	UBO &ubo = ubo_data.ubo;
 	UBO &prev_ubo = ubo_data.prev_ubo;
 
+	Projection projection;
 	Projection correction;
-	correction.set_depth_correction(p_flip_y);
-	correction.add_jitter_offset(taa_jitter);
-	Projection projection = correction * cam_projection;
+
+	if (ProjectSettings::get_singleton()->get_setting("rendering/renderer/reversed-z")) {
+		// Reversed-z
+		correction.add_jitter_offset(taa_jitter);
+		projection = cam_projection.flipped_y();
+		projection.reverse_z_perspective();
+		projection = correction * projection;
+	} else {
+		correction.set_depth_correction(p_flip_y);
+		correction.add_jitter_offset(taa_jitter);
+		projection = correction * cam_projection;
+	}
 
 	//store camera into ubo
 	RendererRD::MaterialStorage::store_camera(projection, ubo.projection_matrix);

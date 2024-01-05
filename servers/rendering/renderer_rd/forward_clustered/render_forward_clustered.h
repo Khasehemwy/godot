@@ -383,7 +383,7 @@ class RenderForwardClustered : public RendererSceneRenderRD {
 
 	LocalVector<RD::DrawListID> thread_draw_lists;
 	void _render_list_thread_function(uint32_t p_thread, RenderListParameters *p_params);
-	void _render_list_with_threads(RenderListParameters *p_params, RID p_framebuffer, RD::InitialAction p_initial_color_action, RD::FinalAction p_final_color_action, RD::InitialAction p_initial_depth_action, RD::FinalAction p_final_depth_action, const Vector<Color> &p_clear_color_values = Vector<Color>(), float p_clear_depth = 1.0, uint32_t p_clear_stencil = 0, const Rect2 &p_region = Rect2(), const Vector<RID> &p_storage_textures = Vector<RID>());
+	void _render_list_with_threads(RenderListParameters *p_params, RID p_framebuffer, RD::InitialAction p_initial_color_action, RD::FinalAction p_final_color_action, RD::InitialAction p_initial_depth_action, RD::FinalAction p_final_depth_action, const Vector<Color> &p_clear_color_values = Vector<Color>(), float p_clear_depth = ProjectSettings::get_singleton()->get_setting("rendering/renderer/reversed-z") ? 0.0 : 1.0, uint32_t p_clear_stencil = 0, const Rect2 &p_region = Rect2(), const Vector<RID> &p_storage_textures = Vector<RID>());
 
 	uint32_t render_list_thread_threshold = 500;
 
