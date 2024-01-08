@@ -284,9 +284,6 @@ void Projection::set_perspective(real_t p_fovy_degrees, real_t p_aspect, real_t 
 	columns[2][3] = -1;
 	columns[3][2] = -2 * p_z_near * p_z_far / deltaZ;
 	columns[3][3] = 0;
-
-	// Both Opengl and Vulkan use the same Projection matrix, but they are different in Shader.
-	// Perhaps the modifications for different APIs are made to PROJECTION_MATRIX.
 }
 
 void Projection::set_perspective(real_t p_fovy_degrees, real_t p_aspect, real_t p_z_near, real_t p_z_far, bool p_flip_fov, int p_eye, real_t p_intraocular_dist, real_t p_convergence_dist) {

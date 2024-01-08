@@ -2757,26 +2757,6 @@ RDD::PipelineID RenderingDeviceDriverVulkan::render_pipeline_create(
 	depth_stencil_state_create_info.minDepthBounds = p_depth_stencil_state.depth_range_min;
 	depth_stencil_state_create_info.maxDepthBounds = p_depth_stencil_state.depth_range_max;
 
-	if (ProjectSettings::get_singleton()->get_setting("rendering/renderer/reversed-z")) {
-		// Reversed-z
-		switch (depth_stencil_state_create_info.depthCompareOp) {
-			case VK_COMPARE_OP_LESS:
-				depth_stencil_state_create_info.depthCompareOp = VK_COMPARE_OP_GREATER;
-				break;
-			case VK_COMPARE_OP_LESS_OR_EQUAL:
-				depth_stencil_state_create_info.depthCompareOp = VK_COMPARE_OP_GREATER_OR_EQUAL;
-				break;
-			case VK_COMPARE_OP_GREATER:
-				depth_stencil_state_create_info.depthCompareOp = VK_COMPARE_OP_LESS;
-				break;
-			case VK_COMPARE_OP_GREATER_OR_EQUAL:
-				depth_stencil_state_create_info.depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL;
-				break;
-			default:
-				break;
-		}
-	}
-
 	// Blend state.
 
 	VkPipelineColorBlendStateCreateInfo color_blend_state_create_info = {};
