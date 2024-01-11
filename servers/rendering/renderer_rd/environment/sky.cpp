@@ -751,12 +751,6 @@ void SkyRD::init() {
 		sky_modes.push_back("\n#define USE_HALF_RES_PASS\n#define USE_MULTIVIEW\n"); // Half Res multiview
 		sky_modes.push_back("\n#define USE_QUARTER_RES_PASS\n#define USE_MULTIVIEW\n"); // Quarter res multiview
 
-		if (ProjectSettings::get_singleton()->get_setting("rendering/renderer/reversed-z")) {
-			for (String& sky_mode : sky_modes) {
-				sky_mode += "\n#define REVERSED_Z\n";
-			}
-		}
-
 		sky_shader.shader.initialize(sky_modes, defines);
 
 		if (!RendererCompositorRD::get_singleton()->is_xr_enabled()) {

@@ -195,6 +195,9 @@ void ShaderRD::_build_variant_code(StringBuilder &builder, uint32_t p_variant, c
 				builder.append("#define MOLTENVK_USED\n");
 #endif
 				builder.append(String("#define RENDER_DRIVER_") + OS::get_singleton()->get_current_rendering_driver_name().to_upper() + "\n");
+				if (ProjectSettings::get_singleton()->get_setting("rendering/renderer/reversed-z")) {
+					builder.append(String("\n#define REVERSED_Z\n"));
+				}
 			} break;
 			case StageTemplate::Chunk::TYPE_MATERIAL_UNIFORMS: {
 				builder.append(p_version->uniforms.get_data()); //uniforms (same for vertex and fragment)
