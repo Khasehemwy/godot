@@ -52,17 +52,9 @@ void RenderSceneDataRD::update_ubo(RID p_uniform_buffer, RS::ViewportDebugDraw p
 	Projection projection;
 	Projection correction;
 
-	if (ProjectSettings::get_singleton()->get_setting("rendering/renderer/reversed-z")) {
-		// Reversed-z
-		correction.add_jitter_offset(taa_jitter);
-		projection = cam_projection.flipped_y();
-		projection.reverse_z_perspective();
-		projection = correction * projection;
-	} else {
-		correction.set_depth_correction(p_flip_y);
-		correction.add_jitter_offset(taa_jitter);
-		projection = correction * cam_projection;
-	}
+	correction.set_depth_correction(p_flip_y);
+	correction.add_jitter_offset(taa_jitter);
+	projection = correction * cam_projection;
 
 	//store camera into ubo
 	RendererRD::MaterialStorage::store_camera(projection, ubo.projection_matrix);
