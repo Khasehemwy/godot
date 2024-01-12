@@ -2986,7 +2986,7 @@ RID RenderingDevice::render_pipeline_create(RID p_shader, FramebufferFormatID p_
 		p_render_primitive,
 		p_rasterization_state,
 		p_multisample_state,
-		reversed_z_depth_stencil_state,
+		p_depth_stencil_state,
 		p_blend_state,
 		pass.color_attachments,
 		p_dynamic_state_flags,

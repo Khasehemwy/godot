@@ -665,7 +665,7 @@ void LightmapperRD::_raster_geometry(RenderingDevice *rd, Size2i atlas_size, int
 	RD::PipelineDepthStencilState ds;
 	ds.enable_depth_test = true;
 	ds.enable_depth_write = true;
-	ds.depth_compare_operator = RD::COMPARE_OP_LESS; //so it does render same pixel twice
+	ds.depth_compare_operator = RD::COMPARE_OP_GREATER; //so it does render same pixel twice
 
 	RID raster_pipeline = rd->render_pipeline_create(rasterize_shader, rd->framebuffer_get_format(framebuffers[0]), RD::INVALID_FORMAT_ID, RD::RENDER_PRIMITIVE_TRIANGLES, RD::PipelineRasterizationState(), RD::PipelineMultisampleState(), ds, RD::PipelineColorBlendState::create_disabled(3), 0);
 	RID raster_pipeline_wire;
@@ -1841,7 +1841,7 @@ LightmapperRD::BakeError LightmapperRD::bake(BakeQuality p_quality, bool p_use_d
 		RD::PipelineDepthStencilState ds;
 		ds.enable_depth_test = true;
 		ds.enable_depth_write = true;
-		ds.depth_compare_operator = RD::COMPARE_OP_LESS; //so it does not render same pixel twice, this avoids wrong blending
+		ds.depth_compare_operator = RD::COMPARE_OP_GREATER; //so it does not render same pixel twice, this avoids wrong blending
 
 		RID blendseams_line_raster_pipeline = rd->render_pipeline_create(blendseams_line_raster_shader, rd->framebuffer_get_format(framebuffers[0]), RD::INVALID_FORMAT_ID, RD::RENDER_PRIMITIVE_LINES, RD::PipelineRasterizationState(), RD::PipelineMultisampleState(), ds, bs, 0);
 		RID blendseams_triangle_raster_pipeline = rd->render_pipeline_create(blendseams_triangle_raster_shader, rd->framebuffer_get_format(framebuffers[0]), RD::INVALID_FORMAT_ID, RD::RENDER_PRIMITIVE_TRIANGLES, RD::PipelineRasterizationState(), RD::PipelineMultisampleState(), ds, bs, 0);
