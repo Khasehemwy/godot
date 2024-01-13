@@ -1124,7 +1124,7 @@ void LightStorage::update_directional_shadow_atlas() {
 	glUseProgram(0);
 	glDepthMask(GL_TRUE);
 	glBindFramebuffer(GL_FRAMEBUFFER, directional_shadow.fbo);
-	RasterizerGLES3::clear_depth(1.0);
+	RasterizerGLES3::clear_depth(0.0);
 	glClear(GL_DEPTH_BUFFER_BIT);
 
 	glBindTexture(GL_TEXTURE_2D, 0);

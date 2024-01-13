@@ -2156,14 +2156,14 @@ void RasterizerSceneGLES3::_render_shadow_pass(RID p_light, RID p_shadow_atlas, 
 	glDisable(GL_BLEND);
 	glDepthMask(GL_TRUE);
 	glEnable(GL_DEPTH_TEST);
-	glDepthFunc(GL_LESS);
+	glDepthFunc(GL_GREATER);
 	glDisable(GL_SCISSOR_TEST);
 	glCullFace(GL_BACK);
 	glEnable(GL_CULL_FACE);
 	scene_state.cull_mode = GLES3::SceneShaderData::CULL_BACK;
 
 	glColorMask(0, 0, 0, 0);
-	RasterizerGLES3::clear_depth(1.0);
+	RasterizerGLES3::clear_depth(0.0);
 	if (needs_clear) {
 		glClear(GL_DEPTH_BUFFER_BIT);
 	}
@@ -2416,11 +2416,11 @@ void RasterizerSceneGLES3::render_scene(const Ref<RenderSceneBuffers> &p_render_
 		glDisable(GL_BLEND);
 		glDepthMask(GL_TRUE);
 		glEnable(GL_DEPTH_TEST);
-		glDepthFunc(GL_LEQUAL);
+		glDepthFunc(GL_GEQUAL);
 		glDisable(GL_SCISSOR_TEST);
 
 		glColorMask(0, 0, 0, 0);
-		RasterizerGLES3::clear_depth(1.0);
+		RasterizerGLES3::clear_depth(0.0);
 
 		glClear(GL_DEPTH_BUFFER_BIT);
 		uint64_t spec_constant = SceneShaderGLES3::DISABLE_FOG | SceneShaderGLES3::DISABLE_LIGHT_DIRECTIONAL |
@@ -2450,13 +2450,13 @@ void RasterizerSceneGLES3::render_scene(const Ref<RenderSceneBuffers> &p_render_
 	scene_state.current_blend_mode = GLES3::SceneShaderData::BLEND_MODE_MIX;
 
 	glEnable(GL_DEPTH_TEST);
-	glDepthFunc(GL_LEQUAL);
+	glDepthFunc(GL_GEQUAL);
 	glDepthMask(GL_TRUE);
 	scene_state.current_depth_test = GLES3::SceneShaderData::DEPTH_TEST_ENABLED;
 	scene_state.current_depth_draw = GLES3::SceneShaderData::DEPTH_DRAW_ALWAYS;
 
 	if (!fb_cleared) {
-		RasterizerGLES3::clear_depth(1.0);
+		RasterizerGLES3::clear_depth(0.0);
 		glClear(GL_DEPTH_BUFFER_BIT);
 	}
 
@@ -3339,14 +3339,14 @@ void RasterizerSceneGLES3::render_particle_collider_heightfield(RID p_collider, 
 	glDisable(GL_BLEND);
 	glDepthMask(GL_TRUE);
 	glEnable(GL_DEPTH_TEST);
-	glDepthFunc(GL_LESS);
+	glDepthFunc(GL_GREATER);
 	glDisable(GL_SCISSOR_TEST);
 	glCullFace(GL_BACK);
 	glEnable(GL_CULL_FACE);
 	scene_state.cull_mode = GLES3::SceneShaderData::CULL_BACK;
 
 	glColorMask(0, 0, 0, 0);
-	RasterizerGLES3::clear_depth(1.0);
+	RasterizerGLES3::clear_depth(0.0);
 
 	glClear(GL_DEPTH_BUFFER_BIT);
 
