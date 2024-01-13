@@ -2962,24 +2962,6 @@ RID RenderingDevice::render_pipeline_create(RID p_shader, FramebufferFormatID p_
 
 	RenderPipeline pipeline;
 
-	RenderingDeviceCommons::PipelineDepthStencilState reversed_z_depth_stencil_state = p_depth_stencil_state;
-	switch (reversed_z_depth_stencil_state.depth_compare_operator) {
-		case COMPARE_OP_LESS:
-			reversed_z_depth_stencil_state.depth_compare_operator = COMPARE_OP_GREATER;
-			break;
-		case COMPARE_OP_LESS_OR_EQUAL:
-			reversed_z_depth_stencil_state.depth_compare_operator = COMPARE_OP_GREATER_OR_EQUAL;
-			break;
-		case COMPARE_OP_GREATER:
-			reversed_z_depth_stencil_state.depth_compare_operator = COMPARE_OP_LESS;
-			break;
-		case COMPARE_OP_GREATER_OR_EQUAL:
-			reversed_z_depth_stencil_state.depth_compare_operator = COMPARE_OP_LESS_OR_EQUAL;
-			break;
-		default:
-			break;
-	}
-
 	pipeline.driver_id = driver->render_pipeline_create(
 		shader->driver_id,
 		driver_vertex_format,
