@@ -185,7 +185,7 @@ Plane Projection::get_projection_plane(Planes p_plane) const {
 		case PLANE_FAR: {
 			Plane new_plane = Plane(matrix[3] + matrix[2],
 					matrix[7] + matrix[6],
-					matrix[11] + matrix[10],
+					-matrix[11] - matrix[10],
 					matrix[15] + matrix[14]);
 
 			new_plane.normal = -new_plane.normal;
@@ -407,8 +407,8 @@ real_t Projection::get_z_far() const {
 	const real_t *matrix = (const real_t *)columns;
 	Plane new_plane = Plane(matrix[3] + matrix[2],
 			matrix[7] + matrix[6],
-			matrix[11] + matrix[10],
-			-matrix[15] - matrix[14]);
+			-matrix[11] - matrix[10],
+			matrix[15] + matrix[14]);
 
 	new_plane.normalize();
 
@@ -420,7 +420,7 @@ real_t Projection::get_z_near() const {
 	Plane new_plane = Plane(matrix[3] - matrix[2],
 			matrix[7] - matrix[6],
 			matrix[11] - matrix[10],
-			matrix[15] - matrix[14]);
+			-matrix[15] + matrix[14]);
 
 	new_plane.normalize();
 	return new_plane.d;
@@ -459,7 +459,7 @@ Vector2 Projection::get_far_plane_half_extents() const {
 	///////--- Far Plane ---///////
 	Plane far_plane = Plane(matrix[3] + matrix[2],
 			matrix[7] + matrix[6],
-			matrix[11] + matrix[10],
+			-matrix[11] - matrix[10],
 			-matrix[15] - matrix[14]);
 	far_plane.normalize();
 
@@ -536,7 +536,7 @@ Vector<Plane> Projection::get_projection_planes(const Transform3D &p_transform) 
 	///////--- Far Plane ---///////
 	new_plane = Plane(matrix[3] + matrix[2],
 			matrix[7] + matrix[6],
-			matrix[11] + matrix[10],
+			-matrix[11] - matrix[10],
 			matrix[15] + matrix[14]);
 
 	new_plane.normal = -new_plane.normal;
