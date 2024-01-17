@@ -3438,7 +3438,7 @@ void RasterizerSceneGLES3::_render_buffers_debug_draw(Ref<RenderSceneBuffersGLES
 						copy_effects->copy_cube_to_rect(atlas_uv_rect);
 
 						glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE);
-						glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_COMPARE_FUNC, GL_LESS);
+						glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_COMPARE_FUNC, GL_GREATER);
 					} else {
 						glBindTexture(GL_TEXTURE_2D, shadow_tex);
 						glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE, GL_NONE);
@@ -3446,7 +3446,7 @@ void RasterizerSceneGLES3::_render_buffers_debug_draw(Ref<RenderSceneBuffersGLES
 						copy_effects->copy_to_rect(atlas_uv_rect);
 
 						glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE);
-						glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_FUNC, GL_LESS);
+						glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_FUNC, GL_GREATER);
 					}
 				}
 			}
@@ -3482,7 +3482,7 @@ void RasterizerSceneGLES3::_render_buffers_debug_draw(Ref<RenderSceneBuffersGLES
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_B, GL_BLUE);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_A, GL_ALPHA);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_FUNC, GL_LESS);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_FUNC, GL_GREATER);
 			glBindTexture(GL_TEXTURE_2D, 0);
 		}
 	}
