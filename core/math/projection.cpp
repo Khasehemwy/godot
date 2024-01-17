@@ -98,7 +98,7 @@ void Projection::adjust_perspective_znear(real_t p_new_znear) {
 	real_t znear = p_new_znear;
 
 	real_t deltaZ = zfar - znear;
-	columns[2][2] = (zfar - 3 * znear) / deltaZ;
+	columns[2][2] = (zfar + znear) / deltaZ;;
 	columns[3][2] = (2 * znear * zfar) / deltaZ;
 }
 
@@ -185,7 +185,7 @@ Plane Projection::get_projection_plane(Planes p_plane) const {
 		case PLANE_FAR: {
 			Plane new_plane = Plane(matrix[3] + matrix[2],
 					matrix[7] + matrix[6],
-					-matrix[11] - matrix[10],
+					matrix[11] + matrix[10],
 					matrix[15] + matrix[14]);
 
 			new_plane.normal = -new_plane.normal;
@@ -270,7 +270,7 @@ void Projection::set_perspective(real_t p_fovy_degrees, real_t p_aspect, real_t 
 	// Using reversed-z
 	columns[0][0] = cotangent / p_aspect;
 	columns[1][1] = cotangent;
-	columns[2][2] = (p_z_far - 3 * p_z_near) / deltaZ;
+	columns[2][2] = (p_z_far + p_z_near) / deltaZ;
 	columns[2][3] = -1;
 	columns[3][2] = (2 * p_z_near * p_z_far) / deltaZ;
 	columns[3][3] = 0;
@@ -374,8 +374,8 @@ void Projection::set_frustum(real_t p_left, real_t p_right, real_t p_bottom, rea
 
 	real_t a = (p_right + p_left) / (p_right - p_left);
 	real_t b = (p_top + p_bottom) / (p_top - p_bottom);
-	real_t c = -(p_far + p_near) / (p_far - p_near);
-	real_t d = -2 * p_far * p_near / (p_far - p_near);
+	real_t c = (p_far + p_near) / (p_far - p_near);
+	real_t d = 2 * p_far * p_near / (p_far - p_near);
 
 	te[0] = x;
 	te[1] = 0;
@@ -407,7 +407,7 @@ real_t Projection::get_z_far() const {
 	const real_t *matrix = (const real_t *)columns;
 	Plane new_plane = Plane(matrix[3] + matrix[2],
 			matrix[7] + matrix[6],
-			-matrix[11] - matrix[10],
+			matrix[11] + matrix[10],
 			matrix[15] + matrix[14]);
 
 	new_plane.normalize();
@@ -459,8 +459,8 @@ Vector2 Projection::get_far_plane_half_extents() const {
 	///////--- Far Plane ---///////
 	Plane far_plane = Plane(matrix[3] + matrix[2],
 			matrix[7] + matrix[6],
-			-matrix[11] - matrix[10],
-			-matrix[15] - matrix[14]);
+			matrix[11] + matrix[10],
+			matrix[15] + matrix[14]);
 	far_plane.normalize();
 
 	///////--- Right Plane ---///////
@@ -536,7 +536,7 @@ Vector<Plane> Projection::get_projection_planes(const Transform3D &p_transform) 
 	///////--- Far Plane ---///////
 	new_plane = Plane(matrix[3] + matrix[2],
 			matrix[7] + matrix[6],
-			-matrix[11] - matrix[10],
+			matrix[11] + matrix[10],
 			matrix[15] + matrix[14]);
 
 	new_plane.normal = -new_plane.normal;
