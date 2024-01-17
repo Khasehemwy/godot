@@ -4172,7 +4172,7 @@ RenderForwardClustered::RenderForwardClustered() {
 		sampler.mag_filter = RD::SAMPLER_FILTER_NEAREST;
 		sampler.min_filter = RD::SAMPLER_FILTER_NEAREST;
 		sampler.enable_compare = true;
-		sampler.compare_op = RD::COMPARE_OP_LESS;
+		sampler.compare_op = RD::COMPARE_OP_GREATER;
 		shadow_sampler = RD::get_singleton()->sampler_create(sampler);
 	}
 
