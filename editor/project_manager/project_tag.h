@@ -1,5 +1,5 @@
 /**************************************************************************/
-/*  editor_themes.h                                                       */
+/*  project_tag.h                                                         */
 /**************************************************************************/
 /*                         This file is part of:                          */
 /*                             GODOT ENGINE                               */
@@ -28,54 +28,29 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
-#ifndef EDITOR_THEMES_H
-#define EDITOR_THEMES_H
+#ifndef PROJECT_TAG_H
+#define PROJECT_TAG_H
 
-#include "scene/resources/texture.h"
-#include "scene/resources/theme.h"
+#include "scene/gui/box_container.h"
 
-// The default icon theme is designed to be used for a dark theme. This map stores
-// Color values to convert to other colors for better readability on a light theme.
-class EditorColorMap {
-	// Godot Color values are used to avoid the ambiguity of strings
-	// (where "#ffffff", "fff", and "white" are all equivalent).
-	static HashMap<Color, Color> color_conversion_map;
-	// The names of the icons to never convert, even if one of their colors
-	// are contained in the color map from above.
-	static HashSet<StringName> color_conversion_exceptions;
+class Button;
 
-public:
-	static void add_conversion_color_pair(const String p_from_color, const String p_to_color);
-	static void add_conversion_exception(const StringName &p_icon_name);
+class ProjectTag : public HBoxContainer {
+	GDCLASS(ProjectTag, HBoxContainer);
 
-	static HashMap<Color, Color> &get_color_conversion_map() { return color_conversion_map; };
-	static HashSet<StringName> &get_color_conversion_exceptions() { return color_conversion_exceptions; };
+	String tag_string;
+	bool display_close = false;
 
-	static void create();
-	static void finish();
-};
+	Button *button = nullptr;
 
-class EditorTheme : public Theme {
-	GDCLASS(EditorTheme, Theme);
-
-	static Vector<StringName> editor_theme_types;
+protected:
+	void _notification(int p_what);
 
 public:
-	virtual Color get_color(const StringName &p_name, const StringName &p_theme_type) const override;
-	virtual int get_constant(const StringName &p_name, const StringName &p_theme_type) const override;
-	virtual Ref<Font> get_font(const StringName &p_name, const StringName &p_theme_type) const override;
-	virtual int get_font_size(const StringName &p_name, const StringName &p_theme_type) const override;
-	virtual Ref<Texture2D> get_icon(const StringName &p_name, const StringName &p_theme_type) const override;
-	virtual Ref<StyleBox> get_stylebox(const StringName &p_name, const StringName &p_theme_type) const override;
+	void connect_button_to(const Callable &p_callable);
+	const String get_tag() const;
 
-	static void initialize();
-	static void finalize();
+	ProjectTag(const String &p_text, bool p_display_close = false);
 };
 
-Ref<Theme> create_editor_theme(Ref<Theme> p_theme = nullptr);
-
-Ref<Theme> create_custom_theme(Ref<Theme> p_theme = nullptr);
-
-String get_default_project_icon();
-
-#endif // EDITOR_THEMES_H
+#endif // PROJECT_TAG_H

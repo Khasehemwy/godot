@@ -30,11 +30,11 @@
 
 #include "editor_fonts.h"
 
-#include "builtin_fonts.gen.h"
 #include "core/io/dir_access.h"
-#include "editor/editor_scale.h"
 #include "editor/editor_settings.h"
 #include "editor/editor_string_names.h"
+#include "editor/themes/builtin_fonts.gen.h"
+#include "editor/themes/editor_scale.h"
 #include "scene/resources/font.h"
 
 Ref<FontFile> load_external_font(const String &p_path, TextServer::Hinting p_hinting, TextServer::FontAntialiasing p_aa, bool p_autohint, TextServer::SubpixelPositioning p_font_subpixel_positioning, bool p_msdf = false, TypedArray<Font> *r_fallbacks = nullptr) {
@@ -106,8 +106,7 @@ Ref<FontVariation> make_bold_font(const Ref<Font> &p_font, double p_embolden, Ty
 	return font_var;
 }
 
-void editor_register_fonts(Ref<Theme> p_theme) {
-	OS::get_singleton()->benchmark_begin_measure("EditorTheme", "Register Fonts");
+void editor_register_fonts(const Ref<Theme> &p_theme) {
 	Ref<DirAccess> dir = DirAccess::create(DirAccess::ACCESS_FILESYSTEM);
 
 	TextServer::FontAntialiasing font_antialiasing = (TextServer::FontAntialiasing)(int)EDITOR_GET("interface/editor/font_antialiasing");
@@ -444,6 +443,4 @@ void editor_register_fonts(Ref<Theme> p_theme) {
 
 	p_theme->set_font_size("status_source_size", EditorStringName(EditorFonts), default_font_size);
 	p_theme->set_font("status_source", EditorStringName(EditorFonts), mono_other_fc);
-
-	OS::get_singleton()->benchmark_end_measure("EditorTheme", "Register Fonts");
 }

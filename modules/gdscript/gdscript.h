@@ -262,6 +262,10 @@ public:
 	bool is_tool() const override { return tool; }
 	Ref<GDScript> get_base() const;
 
+	static String get_raw_source_code(const String &p_path, bool *r_error = nullptr);
+	static Vector2i get_uid_lines(const String &p_source);
+	static String create_uid_line(const String &p_uid_str);
+
 	const HashMap<StringName, MemberInfo> &debug_get_member_indices() const { return member_indices; }
 	const HashMap<StringName, GDScriptFunction *> &debug_get_member_functions() const; //this is debug only
 	StringName debug_get_member_by_index(int p_idx) const;
@@ -575,6 +579,7 @@ public:
 	virtual String debug_parse_stack_level_expression(int p_level, const String &p_expression, int p_max_subitems = -1, int p_max_depth = -1) override;
 
 	virtual void reload_all_scripts() override;
+	virtual void reload_scripts(const Array &p_scripts, bool p_soft_reload) override;
 	virtual void reload_tool_script(const Ref<Script> &p_script, bool p_soft_reload) override;
 
 	virtual void frame() override;
@@ -615,6 +620,7 @@ public:
 	virtual void get_recognized_extensions(List<String> *p_extensions) const;
 	virtual bool handles_type(const String &p_type) const;
 	virtual String get_resource_type(const String &p_path) const;
+	virtual ResourceUID::ID get_resource_uid(const String &p_path) const;
 	virtual void get_dependencies(const String &p_path, List<String> *p_dependencies, bool p_add_types = false);
 };
 
@@ -623,6 +629,7 @@ public:
 	virtual Error save(const Ref<Resource> &p_resource, const String &p_path, uint32_t p_flags = 0);
 	virtual void get_recognized_extensions(const Ref<Resource> &p_resource, List<String> *p_extensions) const;
 	virtual bool recognize(const Ref<Resource> &p_resource) const;
+	virtual Error set_uid(const String &p_path, ResourceUID::ID p_uid);
 };
 
 #endif // GDSCRIPT_H

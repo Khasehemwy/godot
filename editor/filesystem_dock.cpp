@@ -42,7 +42,6 @@
 #include "editor/editor_feature_profile.h"
 #include "editor/editor_node.h"
 #include "editor/editor_resource_preview.h"
-#include "editor/editor_scale.h"
 #include "editor/editor_settings.h"
 #include "editor/editor_string_names.h"
 #include "editor/gui/editor_dir_dialog.h"
@@ -53,6 +52,8 @@
 #include "editor/scene_create_dialog.h"
 #include "editor/scene_tree_dock.h"
 #include "editor/shader_create_dialog.h"
+#include "editor/themes/editor_scale.h"
+#include "editor/themes/editor_theme_manager.h"
 #include "scene/gui/item_list.h"
 #include "scene/gui/label.h"
 #include "scene/gui/line_edit.h"
@@ -625,7 +626,7 @@ void FileSystemDock::_notification(int p_what) {
 			// Update editor dark theme & always show folders states from editor settings, redraw if needed.
 			bool do_redraw = false;
 
-			bool new_editor_is_dark_theme = EditorSettings::get_singleton()->is_dark_theme();
+			bool new_editor_is_dark_theme = EditorThemeManager::is_dark_theme();
 			if (new_editor_is_dark_theme != editor_is_dark_theme) {
 				editor_is_dark_theme = new_editor_is_dark_theme;
 				do_redraw = true;
@@ -765,7 +766,7 @@ void FileSystemDock::navigate_to_path(const String &p_path) {
 }
 
 void FileSystemDock::_file_list_thumbnail_done(const String &p_path, const Ref<Texture2D> &p_preview, const Ref<Texture2D> &p_small_preview, const Variant &p_udata) {
-	if ((file_list_vb->is_visible_in_tree() || current_path == p_path.get_base_dir()) && p_preview.is_valid()) {
+	if ((file_list_vb->is_visible_in_tree() || current_path.trim_suffix("/") == p_path.get_base_dir()) && p_preview.is_valid()) {
 		Array uarr = p_udata;
 		int idx = uarr[0];
 		String file = uarr[1];
@@ -865,18 +866,7 @@ void FileSystemDock::_search(EditorFileSystemDirectory *p_path, List<FileInfo> *
 
 struct FileSystemDock::FileInfoTypeComparator {
 	bool operator()(const FileInfo &p_a, const FileInfo &p_b) const {
-		// Uses the extension, then the icon name to distinguish file types.
-		String icon_path_a = "";
-		String icon_path_b = "";
-		Ref<Texture2D> icon_a = EditorNode::get_singleton()->get_class_icon(p_a.type);
-		if (icon_a.is_valid()) {
-			icon_path_a = icon_a->get_name();
-		}
-		Ref<Texture2D> icon_b = EditorNode::get_singleton()->get_class_icon(p_b.type);
-		if (icon_b.is_valid()) {
-			icon_path_b = icon_b->get_name();
-		}
-		return NaturalNoCaseComparator()(p_a.name.get_extension() + icon_path_a + p_a.name.get_basename(), p_b.name.get_extension() + icon_path_b + p_b.name.get_basename());
+		return NaturalNoCaseComparator()(p_a.name.get_extension() + p_a.type + p_a.name.get_basename(), p_b.name.get_extension() + p_b.type + p_b.name.get_basename());
 	}
 };
 
@@ -3665,6 +3655,70 @@ void FileSystemDock::_bind_methods() {
 	ADD_SIGNAL(MethodInfo("display_mode_changed"));
 }
 
+void FileSystemDock::save_layout_to_config(Ref<ConfigFile> p_layout, const String &p_section) const {
+	p_layout->set_value(p_section, "dock_filesystem_h_split_offset", get_h_split_offset());
+	p_layout->set_value(p_section, "dock_filesystem_v_split_offset", get_v_split_offset());
+	p_layout->set_value(p_section, "dock_filesystem_display_mode", get_display_mode());
+	p_layout->set_value(p_section, "dock_filesystem_file_sort", get_file_sort());
+	p_layout->set_value(p_section, "dock_filesystem_file_list_display_mode", get_file_list_display_mode());
+	PackedStringArray selected_files = get_selected_paths();
+	p_layout->set_value(p_section, "dock_filesystem_selected_paths", selected_files);
+	Vector<String> uncollapsed_paths = get_uncollapsed_paths();
+	p_layout->set_value(p_section, "dock_filesystem_uncollapsed_paths", uncollapsed_paths);
+}
+
+void FileSystemDock::load_layout_from_config(Ref<ConfigFile> p_layout, const String &p_section) {
+	if (p_layout->has_section_key(p_section, "dock_filesystem_h_split_offset")) {
+		int fs_h_split_ofs = p_layout->get_value(p_section, "dock_filesystem_h_split_offset");
+		set_h_split_offset(fs_h_split_ofs);
+	}
+
+	if (p_layout->has_section_key(p_section, "dock_filesystem_v_split_offset")) {
+		int fs_v_split_ofs = p_layout->get_value(p_section, "dock_filesystem_v_split_offset");
+		set_v_split_offset(fs_v_split_ofs);
+	}
+
+	if (p_layout->has_section_key(p_section, "dock_filesystem_display_mode")) {
+		DisplayMode dock_filesystem_display_mode = DisplayMode(int(p_layout->get_value(p_section, "dock_filesystem_display_mode")));
+		set_display_mode(dock_filesystem_display_mode);
+	}
+
+	if (p_layout->has_section_key(p_section, "dock_filesystem_file_sort")) {
+		FileSortOption dock_filesystem_file_sort = FileSortOption(int(p_layout->get_value(p_section, "dock_filesystem_file_sort")));
+		set_file_sort(dock_filesystem_file_sort);
+	}
+
+	if (p_layout->has_section_key(p_section, "dock_filesystem_file_list_display_mode")) {
+		FileListDisplayMode dock_filesystem_file_list_display_mode = FileListDisplayMode(int(p_layout->get_value(p_section, "dock_filesystem_file_list_display_mode")));
+		set_file_list_display_mode(dock_filesystem_file_list_display_mode);
+	}
+
+	if (p_layout->has_section_key(p_section, "dock_filesystem_selected_paths")) {
+		PackedStringArray dock_filesystem_selected_paths = p_layout->get_value(p_section, "dock_filesystem_selected_paths");
+		for (int i = 0; i < dock_filesystem_selected_paths.size(); i++) {
+			select_file(dock_filesystem_selected_paths[i]);
+		}
+	}
+
+	// Restore collapsed state.
+	PackedStringArray uncollapsed_tis;
+	if (p_layout->has_section_key(p_section, "dock_filesystem_uncollapsed_paths")) {
+		uncollapsed_tis = p_layout->get_value(p_section, "dock_filesystem_uncollapsed_paths");
+	} else {
+		uncollapsed_tis = { "res://" };
+	}
+
+	if (!uncollapsed_tis.is_empty()) {
+		for (int i = 0; i < uncollapsed_tis.size(); i++) {
+			TreeItem *uncollapsed_ti = get_tree_control()->get_item_with_metadata(uncollapsed_tis[i], 0);
+			if (uncollapsed_ti) {
+				uncollapsed_ti->set_collapsed(false);
+			}
+		}
+		get_tree_control()->queue_redraw();
+	}
+}
+
 FileSystemDock::FileSystemDock() {
 	singleton = this;
 	set_name("FileSystem");
@@ -3699,7 +3753,7 @@ FileSystemDock::FileSystemDock() {
 
 	assigned_folder_colors = ProjectSettings::get_singleton()->get_setting("file_customization/folder_colors");
 
-	editor_is_dark_theme = EditorSettings::get_singleton()->is_dark_theme();
+	editor_is_dark_theme = EditorThemeManager::is_dark_theme();
 
 	VBoxContainer *top_vbc = memnew(VBoxContainer);
 	add_child(top_vbc);

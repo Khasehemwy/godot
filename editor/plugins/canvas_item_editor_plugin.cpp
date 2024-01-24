@@ -35,7 +35,6 @@
 #include "core/os/keyboard.h"
 #include "editor/debugger/editor_debugger_node.h"
 #include "editor/editor_node.h"
-#include "editor/editor_scale.h"
 #include "editor/editor_settings.h"
 #include "editor/editor_string_names.h"
 #include "editor/editor_undo_redo_manager.h"
@@ -45,6 +44,8 @@
 #include "editor/plugins/animation_player_editor_plugin.h"
 #include "editor/plugins/script_editor_plugin.h"
 #include "editor/scene_tree_dock.h"
+#include "editor/themes/editor_scale.h"
+#include "editor/themes/editor_theme_manager.h"
 #include "scene/2d/polygon_2d.h"
 #include "scene/2d/skeleton_2d.h"
 #include "scene/2d/sprite_2d.h"
@@ -3898,7 +3899,7 @@ void CanvasItemEditor::_update_editor_settings() {
 	// to distinguish from the other key icons at the top. On a light theme,
 	// the icon will be dark, so we need to lighten it before blending it
 	// with the red color.
-	const Color key_auto_color = EditorSettings::get_singleton()->is_dark_theme() ? Color(1, 1, 1) : Color(4.25, 4.25, 4.25);
+	const Color key_auto_color = EditorThemeManager::is_dark_theme() ? Color(1, 1, 1) : Color(4.25, 4.25, 4.25);
 	key_auto_insert_button->add_theme_color_override("icon_pressed_color", key_auto_color.lerp(Color(1, 0, 0), 0.55));
 	animation_menu->set_icon(get_editor_theme_icon(SNAME("GuiTabMenuHl")));
 
@@ -3932,7 +3933,7 @@ void CanvasItemEditor::_notification(int p_what) {
 				} else {
 					rect = Rect2();
 				}
-				Transform2D xform = ci->get_transform();
+				Transform2D xform = ci->get_global_transform();
 
 				if (rect != se->prev_rect || xform != se->prev_xform) {
 					viewport->queue_redraw();
