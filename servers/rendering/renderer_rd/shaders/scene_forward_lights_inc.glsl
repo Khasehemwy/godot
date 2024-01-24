@@ -513,7 +513,7 @@ float light_process_omni_shadow(uint idx, vec3 vertex, vec3 normal) {
 
 					pos.xy = pos.xy * 0.5 + 0.5;
 					pos.xy = uv_rect.xy + pos.xy * uv_rect.zw;
-					shadow += textureProj(sampler2DShadow(shadow_atlas, shadow_sampler), vec4(pos.xy, z_norm, 1.0));
+					shadow += textureProj(sampler2DShadow(shadow_atlas, shadow_sampler), vec4(pos.xy, 1.0 - z_norm, 1.0));
 				}
 
 				shadow /= float(sc_penumbra_shadow_samples);
@@ -536,6 +536,7 @@ float light_process_omni_shadow(uint idx, vec3 vertex, vec3 normal) {
 			vec2 pos = shadow_sample.xy / shadow_sample.z;
 			float depth = shadow_len - omni_lights.data[idx].shadow_bias;
 			depth *= omni_lights.data[idx].inv_radius;
+			depth = 1.0 - depth;
 			shadow = mix(1.0, sample_omni_pcf_shadow(shadow_atlas, omni_lights.data[idx].soft_shadow_scale / shadow_sample.z, pos, uv_rect, flip_offset, depth), omni_lights.data[idx].shadow_opacity);
 		}
 
@@ -706,7 +707,7 @@ float light_process_spot_shadow(uint idx, vec3 vertex, vec3 normal) {
 		vec4 v = vec4(vertex + normal_bias, 1.0);
 
 		vec4 splane = (spot_lights.data[idx].shadow_matrix * v);
-		splane.z -= spot_lights.data[idx].shadow_bias / (light_length * spot_lights.data[idx].inv_radius);
+		splane.z += spot_lights.data[idx].shadow_bias / (light_length * spot_lights.data[idx].inv_radius);
 		splane /= splane.w;
 
 		float shadow;
