@@ -728,7 +728,7 @@ void Projection::set_depth_correction(bool p_flip_y, bool p_reverse_z, bool p_re
 	m[2] = 0.0;
 	m[3] = 0.0;
 	m[4] = 0.0;
-	m[5] = p_flip_y ? -1 : 1; //No matter what p_restore is, the result is the same.
+	m[5] = p_flip_y ? -1 : 1;
 	m[6] = 0.0;
 	m[7] = 0.0;
 	m[8] = 0.0;
