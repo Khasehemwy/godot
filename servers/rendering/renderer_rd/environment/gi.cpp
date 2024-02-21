@@ -3104,6 +3104,7 @@ void GI::VoxelGIInstance::update(bool p_update_light_instances, const Vector<RID
 
 				Projection cm;
 				cm.set_orthogonal(-rect.size.width / 2, rect.size.width / 2, -rect.size.height / 2, rect.size.height / 2, 0.0001, aabb.size[z_axis]);
+				cm.reverse_z();
 
 				if (RendererSceneRenderRD::get_singleton()->cull_argument.size() == 0) {
 					RendererSceneRenderRD::get_singleton()->cull_argument.push_back(nullptr);

@@ -94,6 +94,7 @@ struct _NO_DISCARD_ Projection {
 	Projection perspective_znear_adjusted(real_t p_new_znear) const;
 	Plane get_projection_plane(Planes p_plane) const;
 	Projection flipped_y() const;
+	Projection create_reversed_z() const;
 	Projection jitter_offseted(const Vector2 &p_offset) const;
 
 	static real_t get_fovy(real_t p_fovx, real_t p_aspect) {
@@ -105,6 +106,7 @@ struct _NO_DISCARD_ Projection {
 	real_t get_aspect() const;
 	real_t get_fov() const;
 	bool is_orthogonal() const;
+	bool is_reversed_z() const;
 
 	Vector<Plane> get_projection_planes(const Transform3D &p_transform) const;
 
@@ -132,6 +134,7 @@ struct _NO_DISCARD_ Projection {
 	operator Transform3D() const;
 
 	void flip_y();
+	void reverse_z();
 
 	bool operator==(const Projection &p_cam) const {
 		for (uint32_t i = 0; i < 4; i++) {

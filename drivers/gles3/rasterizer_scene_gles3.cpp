@@ -820,6 +820,7 @@ void RasterizerSceneGLES3::_draw_sky(RID p_env, const Projection &p_projection, 
 		float aspect = p_projection.get_aspect();
 
 		camera.set_perspective(environment_get_sky_custom_fov(p_env), aspect, near_plane, far_plane);
+		camera.reverse_z();
 	} else {
 		camera = p_projection;
 	}
@@ -934,7 +935,7 @@ void RasterizerSceneGLES3::_update_sky_radiance(RID p_env, const Projection &p_p
 		cm.set_perspective(90, 1, 0.01, 10.0);
 		Projection correction;
 		correction.columns[1][1] = -1.0;
-		cm = correction * cm;
+		cm = correction * cm.create_reversed_z();
 
 		bool success = material_storage->shaders.sky_shader.version_bind_shader(shader_data->version, SkyShaderGLES3::MODE_CUBEMAP);
 		if (!success) {
@@ -2274,11 +2275,11 @@ void RasterizerSceneGLES3::_render_shadow_pass(RID p_light, RID p_shadow_atlas, 
 	scene_state.reset_gl_state();
 	scene_state.enable_gl_depth_test(true);
 	scene_state.enable_gl_depth_draw(true);
-	glDepthFunc(GL_LESS);
+	glDepthFunc(GL_GREATER);
 
 	glColorMask(0, 0, 0, 0);
 	glDrawBuffers(0, nullptr);
-	RasterizerGLES3::clear_depth(1.0);
+	RasterizerGLES3::clear_depth(0.0);
 	if (needs_clear) {
 		glClear(GL_DEPTH_BUFFER_BIT);
 	}
@@ -2554,11 +2555,11 @@ void RasterizerSceneGLES3::render_scene(const Ref<RenderSceneBuffers> &p_render_
 		scene_state.enable_gl_depth_test(true);
 		scene_state.enable_gl_depth_draw(true);
 		scene_state.enable_gl_blend(false);
-		glDepthFunc(GL_LEQUAL);
+		glDepthFunc(GL_GEQUAL);
 		scene_state.enable_gl_scissor_test(false);
 
 		glColorMask(0, 0, 0, 0);
-		RasterizerGLES3::clear_depth(1.0);
+		RasterizerGLES3::clear_depth(0.0);
 		glClear(GL_DEPTH_BUFFER_BIT);
 		glDrawBuffers(0, nullptr);
 
@@ -2590,7 +2591,7 @@ void RasterizerSceneGLES3::render_scene(const Ref<RenderSceneBuffers> &p_render_
 	scene_state.enable_gl_scissor_test(false);
 	scene_state.enable_gl_depth_test(true);
 	scene_state.enable_gl_depth_draw(true);
-	glDepthFunc(GL_LEQUAL);
+	glDepthFunc(GL_GEQUAL);
 
 	{
 		GLuint db = GL_COLOR_ATTACHMENT0;
@@ -2598,7 +2599,7 @@ void RasterizerSceneGLES3::render_scene(const Ref<RenderSceneBuffers> &p_render_
 	}
 
 	if (!fb_cleared) {
-		RasterizerGLES3::clear_depth(1.0);
+		RasterizerGLES3::clear_depth(0.0);
 		glClear(GL_DEPTH_BUFFER_BIT);
 	}
 
@@ -3514,6 +3515,7 @@ void RasterizerSceneGLES3::render_particle_collider_heightfield(RID p_collider, 
 	Vector3 extents = particles_storage->particles_collision_get_extents(p_collider) * p_transform.basis.get_scale();
 	Projection cm;
 	cm.set_orthogonal(-extents.x, extents.x, -extents.z, extents.z, 0, extents.y * 2.0);
+	cm.reverse_z();
 
 	Vector3 cam_pos = p_transform.origin;
 	cam_pos.y += extents.y;
@@ -3559,12 +3561,12 @@ void RasterizerSceneGLES3::render_particle_collider_heightfield(RID p_collider, 
 	scene_state.reset_gl_state();
 	scene_state.enable_gl_depth_test(true);
 	scene_state.enable_gl_depth_draw(true);
-	glDepthFunc(GL_LESS);
+	glDepthFunc(GL_GREATER);
 
 	glDrawBuffers(0, nullptr);
 
 	glColorMask(0, 0, 0, 0);
-	RasterizerGLES3::clear_depth(1.0);
+	RasterizerGLES3::clear_depth(0.0);
 
 	glClear(GL_DEPTH_BUFFER_BIT);
 
@@ -3605,7 +3607,7 @@ void RasterizerSceneGLES3::_render_uv2(const PagedArray<RenderGeometryInstance *
 		scene_state.reset_gl_state();
 		scene_state.enable_gl_depth_test(true);
 		scene_state.enable_gl_depth_draw(true);
-		glDepthFunc(GL_LESS);
+		glDepthFunc(GL_GREATER);
 
 		TightLocalVector<GLenum> draw_buffers;
 		draw_buffers.push_back(GL_COLOR_ATTACHMENT0);
@@ -3738,7 +3740,7 @@ void RasterizerSceneGLES3::_render_buffers_debug_draw(Ref<RenderSceneBuffersGLES
 						copy_effects->copy_cube_to_rect(atlas_uv_rect);
 
 						glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE);
-						glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_COMPARE_FUNC, GL_LESS);
+						glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_COMPARE_FUNC, GL_GREATER);
 					} else {
 						glBindTexture(GL_TEXTURE_2D, shadow_tex);
 						glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE, GL_NONE);
@@ -3746,7 +3748,7 @@ void RasterizerSceneGLES3::_render_buffers_debug_draw(Ref<RenderSceneBuffersGLES
 						copy_effects->copy_to_rect(atlas_uv_rect);
 
 						glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE);
-						glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_FUNC, GL_LESS);
+						glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_FUNC, GL_GREATER);
 					}
 				}
 			}
@@ -3782,7 +3784,7 @@ void RasterizerSceneGLES3::_render_buffers_debug_draw(Ref<RenderSceneBuffersGLES
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_B, GL_BLUE);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_A, GL_ALPHA);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_FUNC, GL_LESS);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_FUNC, GL_GREATER);
 			glBindTexture(GL_TEXTURE_2D, 0);
 		}
 	}

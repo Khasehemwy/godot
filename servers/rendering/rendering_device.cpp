@@ -3027,18 +3027,18 @@ RID RenderingDevice::render_pipeline_create(RID p_shader, FramebufferFormatID p_
 	RenderPipeline pipeline;
 
 	pipeline.driver_id = driver->render_pipeline_create(
-		shader->driver_id,
-		driver_vertex_format,
-		p_render_primitive,
-		p_rasterization_state,
-		p_multisample_state,
-		p_depth_stencil_state,
-		p_blend_state,
-		pass.color_attachments,
-		p_dynamic_state_flags,
-		fb_format.render_pass,
-		p_for_render_pass,
-		p_specialization_constants);
+			shader->driver_id,
+			driver_vertex_format,
+			p_render_primitive,
+			p_rasterization_state,
+			p_multisample_state,
+			p_depth_stencil_state,
+			p_blend_state,
+			pass.color_attachments,
+			p_dynamic_state_flags,
+			fb_format.render_pass,
+			p_for_render_pass,
+			p_specialization_constants);
 
 	ERR_FAIL_COND_V(!pipeline.driver_id, RID());
 

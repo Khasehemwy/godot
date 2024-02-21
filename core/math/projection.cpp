@@ -98,8 +98,8 @@ void Projection::adjust_perspective_znear(real_t p_new_znear) {
 	real_t znear = p_new_znear;
 
 	real_t deltaZ = zfar - znear;
-	columns[2][2] = (zfar + znear) / deltaZ;;
-	columns[3][2] = (2 * znear * zfar) / deltaZ;
+	columns[2][2] = -(zfar + znear) / deltaZ;
+	columns[3][2] = -(2 * znear * zfar) / deltaZ;
 }
 
 Projection Projection::create_depth_correction(bool p_flip_y) {
@@ -173,20 +173,36 @@ Plane Projection::get_projection_plane(Planes p_plane) const {
 
 	switch (p_plane) {
 		case PLANE_NEAR: {
-			Plane new_plane = Plane(matrix[3] - matrix[2],
-					matrix[7] - matrix[6],
-					matrix[11] - matrix[10],
-					matrix[15] - matrix[14]);
+			Plane new_plane;
+			if (is_reversed_z()) {
+				new_plane = Plane(matrix[3] - matrix[2],
+						matrix[7] - matrix[6],
+						matrix[11] - matrix[10],
+						matrix[15] - matrix[14]);
+			} else {
+				new_plane = Plane(matrix[3] + matrix[2],
+						matrix[7] + matrix[6],
+						matrix[11] + matrix[10],
+						matrix[15] + matrix[14]);
+			}
 
 			new_plane.normal = -new_plane.normal;
 			new_plane.normalize();
 			return new_plane;
 		}
 		case PLANE_FAR: {
-			Plane new_plane = Plane(matrix[3] + matrix[2],
-					matrix[7] + matrix[6],
-					matrix[11] + matrix[10],
-					matrix[15] + matrix[14]);
+			Plane new_plane;
+			if (is_reversed_z()) {
+				new_plane = Plane(matrix[3] + matrix[2],
+						matrix[7] + matrix[6],
+						matrix[11] + matrix[10],
+						matrix[15] + matrix[14]);
+			} else {
+				new_plane = Plane(matrix[3] - matrix[2],
+						matrix[7] - matrix[6],
+						matrix[11] - matrix[10],
+						matrix[15] - matrix[14]);
+			}
 
 			new_plane.normal = -new_plane.normal;
 			new_plane.normalize();
@@ -243,6 +259,12 @@ Projection Projection::flipped_y() const {
 	return proj;
 }
 
+Projection Projection::create_reversed_z() const {
+	Projection proj = *this;
+	proj.reverse_z();
+	return proj;
+}
+
 Projection Projection ::jitter_offseted(const Vector2 &p_offset) const {
 	Projection proj = *this;
 	proj.add_jitter_offset(p_offset);
@@ -267,12 +289,11 @@ void Projection::set_perspective(real_t p_fovy_degrees, real_t p_aspect, real_t 
 
 	set_identity();
 
-	// Using reversed-z
 	columns[0][0] = cotangent / p_aspect;
 	columns[1][1] = cotangent;
-	columns[2][2] = (p_z_far + p_z_near) / deltaZ;
+	columns[2][2] = -(p_z_far + p_z_near) / deltaZ;
 	columns[2][3] = -1;
-	columns[3][2] = (2 * p_z_near * p_z_far) / deltaZ;
+	columns[3][2] = -(2 * p_z_near * p_z_far) / deltaZ;
 	columns[3][3] = 0;
 }
 
@@ -345,13 +366,12 @@ void Projection::set_for_hmd(int p_eye, real_t p_aspect, real_t p_intraocular_di
 void Projection::set_orthogonal(real_t p_left, real_t p_right, real_t p_bottom, real_t p_top, real_t p_znear, real_t p_zfar) {
 	set_identity();
 
-	// Using reversed-z
 	columns[0][0] = 2.0 / (p_right - p_left);
 	columns[3][0] = -((p_right + p_left) / (p_right - p_left));
 	columns[1][1] = 2.0 / (p_top - p_bottom);
 	columns[3][1] = -((p_top + p_bottom) / (p_top - p_bottom));
-	columns[2][2] = 2.0 / (p_zfar - p_znear);
-	columns[3][2] = ((p_zfar + p_znear) / (p_zfar - p_znear));
+	columns[2][2] = -2.0 / (p_zfar - p_znear);
+	columns[3][2] = -((p_zfar + p_znear) / (p_zfar - p_znear));
 	columns[3][3] = 1.0;
 }
 
@@ -374,8 +394,8 @@ void Projection::set_frustum(real_t p_left, real_t p_right, real_t p_bottom, rea
 
 	real_t a = (p_right + p_left) / (p_right - p_left);
 	real_t b = (p_top + p_bottom) / (p_top - p_bottom);
-	real_t c = (p_far + p_near) / (p_far - p_near);
-	real_t d = 2 * p_far * p_near / (p_far - p_near);
+	real_t c = -(p_far + p_near) / (p_far - p_near);
+	real_t d = -2 * p_far * p_near / (p_far - p_near);
 
 	te[0] = x;
 	te[1] = 0;
@@ -405,10 +425,18 @@ void Projection::set_frustum(real_t p_size, real_t p_aspect, Vector2 p_offset, r
 
 real_t Projection::get_z_far() const {
 	const real_t *matrix = (const real_t *)columns;
-	Plane new_plane = Plane(matrix[3] + matrix[2],
-			matrix[7] + matrix[6],
-			matrix[11] + matrix[10],
-			matrix[15] + matrix[14]);
+	Plane new_plane;
+	if (is_reversed_z()) {
+		new_plane = Plane(matrix[3] + matrix[2],
+				matrix[7] + matrix[6],
+				matrix[11] + matrix[10],
+				matrix[15] + matrix[14]);
+	} else {
+		new_plane = Plane(matrix[3] - matrix[2],
+				matrix[7] - matrix[6],
+				matrix[11] - matrix[10],
+				matrix[15] - matrix[14]);
+	}
 
 	new_plane.normalize();
 
@@ -417,10 +445,18 @@ real_t Projection::get_z_far() const {
 
 real_t Projection::get_z_near() const {
 	const real_t *matrix = (const real_t *)columns;
-	Plane new_plane = Plane(matrix[3] - matrix[2],
-			matrix[7] - matrix[6],
-			matrix[11] - matrix[10],
-			-matrix[15] + matrix[14]);
+	Plane new_plane;
+	if (is_reversed_z()) {
+		new_plane = Plane(matrix[3] - matrix[2],
+				matrix[7] - matrix[6],
+				matrix[11] - matrix[10],
+				-matrix[15] + matrix[14]);
+	} else {
+		new_plane = Plane(matrix[3] + matrix[2],
+				matrix[7] + matrix[6],
+				matrix[11] + matrix[10],
+				-matrix[15] - matrix[14]);
+	}
 
 	new_plane.normalize();
 	return new_plane.d;
@@ -429,10 +465,18 @@ real_t Projection::get_z_near() const {
 Vector2 Projection::get_viewport_half_extents() const {
 	const real_t *matrix = (const real_t *)columns;
 	///////--- Near Plane ---///////
-	Plane near_plane = Plane(matrix[3] - matrix[2],
-			matrix[7] - matrix[6],
-			matrix[11] - matrix[10],
-			-matrix[15] + matrix[14]);
+	Plane near_plane;
+	if (is_reversed_z()) {
+		near_plane = Plane(matrix[3] - matrix[2],
+				matrix[7] - matrix[6],
+				matrix[11] - matrix[10],
+				-matrix[15] + matrix[14]);
+	} else {
+		near_plane = Plane(matrix[3] + matrix[2],
+				matrix[7] + matrix[6],
+				matrix[11] + matrix[10],
+				-matrix[15] - matrix[14]);
+	}
 	near_plane.normalize();
 
 	///////--- Right Plane ---///////
@@ -457,10 +501,18 @@ Vector2 Projection::get_viewport_half_extents() const {
 Vector2 Projection::get_far_plane_half_extents() const {
 	const real_t *matrix = (const real_t *)columns;
 	///////--- Far Plane ---///////
-	Plane far_plane = Plane(matrix[3] + matrix[2],
-			matrix[7] + matrix[6],
-			matrix[11] + matrix[10],
-			matrix[15] + matrix[14]);
+	Plane far_plane;
+	if (is_reversed_z()) {
+		far_plane = Plane(matrix[3] + matrix[2],
+				matrix[7] + matrix[6],
+				matrix[11] + matrix[10],
+				matrix[15] + matrix[14]);
+	} else {
+		far_plane = Plane(matrix[3] - matrix[2],
+				matrix[7] - matrix[6],
+				matrix[11] - matrix[10],
+				-matrix[15] + matrix[14]);
+	}
 	far_plane.normalize();
 
 	///////--- Right Plane ---///////
@@ -523,10 +575,17 @@ Vector<Plane> Projection::get_projection_planes(const Transform3D &p_transform) 
 	Plane new_plane;
 
 	///////--- Near Plane ---///////
-	new_plane = Plane(matrix[3] - matrix[2],
-			matrix[7] - matrix[6],
-			matrix[11] - matrix[10],
-			matrix[15] - matrix[14]);
+	if (is_reversed_z()) {
+		new_plane = Plane(matrix[3] - matrix[2],
+				matrix[7] - matrix[6],
+				matrix[11] - matrix[10],
+				matrix[15] - matrix[14]);
+	} else {
+		new_plane = Plane(matrix[3] + matrix[2],
+				matrix[7] + matrix[6],
+				matrix[11] + matrix[10],
+				matrix[15] + matrix[14]);
+	}
 
 	new_plane.normal = -new_plane.normal;
 	new_plane.normalize();
@@ -534,10 +593,17 @@ Vector<Plane> Projection::get_projection_planes(const Transform3D &p_transform) 
 	planes.write[0] = p_transform.xform(new_plane);
 
 	///////--- Far Plane ---///////
-	new_plane = Plane(matrix[3] + matrix[2],
-			matrix[7] + matrix[6],
-			matrix[11] + matrix[10],
-			matrix[15] + matrix[14]);
+	if (is_reversed_z()) {
+		new_plane = Plane(matrix[3] + matrix[2],
+				matrix[7] + matrix[6],
+				matrix[11] + matrix[10],
+				matrix[15] + matrix[14]);
+	} else {
+		new_plane = Plane(matrix[3] - matrix[2],
+				matrix[7] - matrix[6],
+				matrix[11] - matrix[10],
+				matrix[15] - matrix[14]);
+	}
 
 	new_plane.normal = -new_plane.normal;
 	new_plane.normalize();
@@ -701,6 +767,12 @@ void Projection::flip_y() {
 	}
 }
 
+void Projection::reverse_z() {
+	// Must be used when the z value belongs to [-1,1]
+	columns[2][2] = columns[2][2] < 0 ? (-columns[2][2]) : columns[2][2];
+	columns[3][2] = columns[3][2] < 0 ? (-columns[3][2]) : columns[3][2];
+}
+
 Projection::Projection() {
 	set_identity();
 }
@@ -808,6 +880,10 @@ int Projection::get_pixels_per_meter(int p_for_pixel_width) const {
 
 bool Projection::is_orthogonal() const {
 	return columns[3][3] == 1.0;
+}
+
+bool Projection::is_reversed_z() const {
+	return columns[2][2] > 0;
 }
 
 real_t Projection::get_fov() const {

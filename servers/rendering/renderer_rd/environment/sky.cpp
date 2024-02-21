@@ -1291,7 +1291,7 @@ void SkyRD::update_radiance_buffers(Ref<RenderSceneBuffersRD> p_render_buffers, 
 		cm.set_perspective(90, 1, 0.01, 10.0);
 		Projection correction;
 		correction.set_depth_correction(true);
-		cm = correction * cm;
+		cm = correction * cm.create_reversed_z();
 
 		// Note, we ignore environment_get_sky_orientation here as this is applied when we do our lookup in our scene shader.
 
