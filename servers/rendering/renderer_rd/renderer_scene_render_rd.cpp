@@ -1181,7 +1181,6 @@ void RendererSceneRenderRD::render_particle_collider_heightfield(RID p_collider,
 	Vector3 extents = particles_storage->particles_collision_get_extents(p_collider) * p_transform.basis.get_scale();
 	Projection cm;
 	cm.set_orthogonal(-extents.x, extents.x, -extents.z, extents.z, 0, extents.y * 2.0);
-	cm.reverse_z();
 
 	Vector3 cam_pos = p_transform.origin;
 	cam_pos.y += extents.y;

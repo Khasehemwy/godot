@@ -2154,7 +2154,6 @@ void RendererSceneCull::_light_instance_setup_directional_shadow(int p_shadow_in
 			real_t fov = p_cam_projection.get_fov(); //this is actually yfov, because set aspect tries to keep it
 			camera_matrix.set_perspective(fov, aspect, distances[(i == 0 || !overlap) ? i : i - 1], distances[i + 1], true);
 		}
-		camera_matrix.reverse_z();
 
 		//obtain the frustum endpoints
 
@@ -2288,7 +2287,8 @@ void RendererSceneCull::_light_instance_setup_directional_shadow(int p_shadow_in
 			real_t half_y = (y_max_cam - y_min_cam) * 0.5;
 
 			ortho_camera.set_orthogonal(-half_x, half_x, -half_y, half_y, 0, (z_max - z_min_cam));
-			ortho_camera.reverse_z();
+			Projection correction;
+			correction.set_depth_correction(false, true, false);
 
 			Vector2 uv_scale(1.0 / (x_max_cam - x_min_cam), 1.0 / (y_max_cam - y_min_cam));
 
@@ -2297,7 +2297,7 @@ void RendererSceneCull::_light_instance_setup_directional_shadow(int p_shadow_in
 			ortho_transform.origin = x_vec * (x_min_cam + half_x) + y_vec * (y_min_cam + half_y) + z_vec * z_max;
 
 			cull.shadows[p_shadow_index].cascades[i].frustum = Frustum(light_frustum_planes);
-			cull.shadows[p_shadow_index].cascades[i].projection = ortho_camera;
+			cull.shadows[p_shadow_index].cascades[i].projection = correction * ortho_camera;
 			cull.shadows[p_shadow_index].cascades[i].transform = ortho_transform;
 			cull.shadows[p_shadow_index].cascades[i].zfar = z_max - z_min_cam;
 			cull.shadows[p_shadow_index].cascades[i].split = distances[i + 1];
@@ -2399,7 +2399,6 @@ bool RendererSceneCull::_light_instance_update_shadow(Instance *p_instance, cons
 				real_t radius = RSG::light_storage->light_get_param(p_instance->base, RS::LIGHT_PARAM_RANGE);
 				Projection cm;
 				cm.set_perspective(90, 1, radius * 0.005f, radius);
-				cm.reverse_z();
 
 				for (int i = 0; i < 6; i++) {
 					RENDER_TIMESTAMP("Cull OmniLight3D Shadow Cube, Side " + itos(i));
@@ -2490,7 +2489,6 @@ bool RendererSceneCull::_light_instance_update_shadow(Instance *p_instance, cons
 
 			Projection cm;
 			cm.set_perspective(angle * 2.0, 1.0, 0.005f * radius, radius);
-			cm.reverse_z();
 
 			Vector<Plane> planes = cm.get_projection_planes(light_transform);
 
@@ -2536,7 +2534,10 @@ bool RendererSceneCull::_light_instance_update_shadow(Instance *p_instance, cons
 
 			RSG::mesh_storage->update_mesh_instances();
 
-			RSG::light_storage->light_instance_set_shadow_transform(light->instance, cm, light_transform, radius, 0, 0, 0);
+			Projection correction;
+			correction.set_depth_correction(false, true, false);
+
+			RSG::light_storage->light_instance_set_shadow_transform(light->instance, correction * cm, light_transform, radius, 0, 0, 0);
 			shadow_data.light = light->instance;
 			shadow_data.pass = 0;
 
@@ -2607,7 +2608,6 @@ void RendererSceneCull::render_camera(const Ref<RenderSceneBuffers> &p_render_bu
 						camera->vaspect);
 			} break;
 		}
-		projection.reverse_z();
 
 		camera_data.set_camera(transform, projection, is_orthogonal, vaspect, jitter, camera->visible_layers);
 	} else {
@@ -2628,7 +2628,6 @@ void RendererSceneCull::render_camera(const Ref<RenderSceneBuffers> &p_render_bu
 		for (uint32_t v = 0; v < view_count; v++) {
 			transforms[v] = p_xr_interface->get_transform_for_view(v, world_origin);
 			projections[v] = p_xr_interface->get_projection_for_view(v, aspect, camera->znear, camera->zfar);
-			projections[v].reverse_z();
 		}
 
 		if (view_count == 1) {
@@ -3524,7 +3523,6 @@ bool RendererSceneCull::_render_reflection_probe_step(Instance *p_instance, int 
 		//render cubemap side
 		Projection cm;
 		cm.set_perspective(90, 1, 0.01, max_distance);
-		cm.reverse_z();
 
 		Transform3D local_view;
 		local_view.set_look_at(origin_offset, origin_offset + view_normals[p_step], view_up[p_step]);

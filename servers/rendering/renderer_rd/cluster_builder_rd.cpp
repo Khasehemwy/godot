@@ -404,8 +404,8 @@ void ClusterBuilderRD::begin(const Transform3D &p_view_transform, const Projecti
 
 	Projection correction;
 	correction.set_depth_correction(p_flip_y);
-	projection = correction * projection.create_reversed_z();
-	adjusted_projection = correction * adjusted_projection.create_reversed_z();
+	projection = correction * projection;
+	adjusted_projection = correction * adjusted_projection;
 
 	// Reset counts.
 	render_element_count = 0;

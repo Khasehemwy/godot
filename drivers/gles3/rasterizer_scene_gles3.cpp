@@ -820,7 +820,9 @@ void RasterizerSceneGLES3::_draw_sky(RID p_env, const Projection &p_projection, 
 		float aspect = p_projection.get_aspect();
 
 		camera.set_perspective(environment_get_sky_custom_fov(p_env), aspect, near_plane, far_plane);
-		camera.reverse_z();
+		Projection correction;
+		correction.set_depth_correction(false, true, false);
+		camera = correction * camera;
 	} else {
 		camera = p_projection;
 	}
@@ -934,8 +936,8 @@ void RasterizerSceneGLES3::_update_sky_radiance(RID p_env, const Projection &p_p
 		Projection cm;
 		cm.set_perspective(90, 1, 0.01, 10.0);
 		Projection correction;
-		correction.columns[1][1] = -1.0;
-		cm = correction * cm.create_reversed_z();
+		correction.set_depth_correction(true, true, false);
+		cm = correction * cm;
 
 		bool success = material_storage->shaders.sky_shader.version_bind_shader(shader_data->version, SkyShaderGLES3::MODE_CUBEMAP);
 		if (!success) {
@@ -1547,7 +1549,7 @@ void RasterizerSceneGLES3::_fill_render_list(RenderListType p_render_list, const
 // Needs to be called after _setup_lights so that directional_light_count is accurate.
 void RasterizerSceneGLES3::_setup_environment(const RenderDataGLES3 *p_render_data, bool p_no_fog, const Size2i &p_screen_size, bool p_flip_y, const Color &p_default_bg_color, bool p_pancake_shadows, float p_shadow_bias) {
 	Projection correction;
-	correction.columns[1][1] = p_flip_y ? -1.0 : 1.0;
+	correction.set_depth_correction(p_flip_y, true, false);
 	Projection projection = correction * p_render_data->cam_projection;
 	//store camera into ubo
 	GLES3::MaterialStorage::store_camera(projection, scene_state.ubo.projection_matrix);
@@ -2164,7 +2166,9 @@ void RasterizerSceneGLES3::_render_shadow_pass(RID p_light, RID p_shadow_atlas, 
 		}
 
 		use_pancake = light_storage->light_get_param(base, RS::LIGHT_PARAM_SHADOW_PANCAKE_SIZE) > 0;
-		light_projection = light_storage->light_instance_get_shadow_camera(p_light, p_pass);
+		Projection correction;
+		correction.set_depth_correction(false, true, false, true);
+		light_projection = correction * light_storage->light_instance_get_shadow_camera(p_light, p_pass);
 		light_transform = light_storage->light_instance_get_shadow_transform(p_light, p_pass);
 
 		float directional_shadow_size = light_storage->directional_shadow_get_size();
@@ -2228,7 +2232,9 @@ void RasterizerSceneGLES3::_render_shadow_pass(RID p_light, RID p_shadow_atlas, 
 			shadow_bias = light_storage->light_get_param(base, RS::LIGHT_PARAM_SHADOW_BIAS);
 
 		} else if (light_storage->light_get_type(base) == RS::LIGHT_SPOT) {
-			light_projection = light_storage->light_instance_get_shadow_camera(p_light, 0);
+			Projection correction;
+			correction.set_depth_correction(false, true, false, true);
+			light_projection = correction * light_storage->light_instance_get_shadow_camera(p_light, 0);
 			light_transform = light_storage->light_instance_get_shadow_transform(p_light, 0);
 
 			shadow_bias = light_storage->light_get_param(base, RS::LIGHT_PARAM_SHADOW_BIAS) / 10.0;
@@ -2516,7 +2522,7 @@ void RasterizerSceneGLES3::render_scene(const Ref<RenderSceneBuffers> &p_render_
 			Projection projection = render_data.cam_projection;
 			if (render_data.reflection_probe.is_valid()) {
 				Projection correction;
-				correction.columns[1][1] = -1.0;
+				correction.set_depth_correction(true, true, false);
 				projection = correction * render_data.cam_projection;
 			}
 
@@ -3515,7 +3521,8 @@ void RasterizerSceneGLES3::render_particle_collider_heightfield(RID p_collider, 
 	Vector3 extents = particles_storage->particles_collision_get_extents(p_collider) * p_transform.basis.get_scale();
 	Projection cm;
 	cm.set_orthogonal(-extents.x, extents.x, -extents.z, extents.z, 0, extents.y * 2.0);
-	cm.reverse_z();
+	//Projection correction;
+	//correction.set_depth_correction(false, true, false);
 
 	Vector3 cam_pos = p_transform.origin;
 	cam_pos.y += extents.y;
