@@ -99,7 +99,7 @@ void Projection::adjust_perspective_znear(real_t p_new_znear) {
 
 	real_t deltaZ = zfar - znear;
 	columns[2][2] = -(zfar + znear) / deltaZ;
-	columns[3][2] = -(2 * znear * zfar) / deltaZ;
+	columns[3][2] = -2 * znear * zfar / deltaZ;
 }
 
 Projection Projection::create_depth_correction(bool p_flip_y) {
@@ -177,7 +177,7 @@ Plane Projection::get_projection_plane(Planes p_plane) const {
 					matrix[7] + matrix[6],
 					matrix[11] + matrix[10],
 					matrix[15] + matrix[14]);
-			
+
 			new_plane.normal = -new_plane.normal;
 			new_plane.normalize();
 			return new_plane;
@@ -187,7 +187,6 @@ Plane Projection::get_projection_plane(Planes p_plane) const {
 					matrix[7] - matrix[6],
 					matrix[11] - matrix[10],
 					matrix[15] - matrix[14]);
-			
 
 			new_plane.normal = -new_plane.normal;
 			new_plane.normalize();
@@ -272,7 +271,7 @@ void Projection::set_perspective(real_t p_fovy_degrees, real_t p_aspect, real_t 
 	columns[1][1] = cotangent;
 	columns[2][2] = -(p_z_far + p_z_near) / deltaZ;
 	columns[2][3] = -1;
-	columns[3][2] = -(2 * p_z_near * p_z_far) / deltaZ;
+	columns[3][2] = -2 * p_z_near * p_z_far / deltaZ;
 	columns[3][3] = 0;
 }
 

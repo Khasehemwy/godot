@@ -75,12 +75,10 @@ void RenderSceneDataRD::update_ubo(RID p_uniform_buffer, RS::ViewportDebugDraw p
 	UBO &ubo = ubo_data.ubo;
 	UBO &prev_ubo = ubo_data.prev_ubo;
 
-	Projection projection;
 	Projection correction;
-
 	correction.set_depth_correction(p_flip_y);
 	correction.add_jitter_offset(taa_jitter);
-	projection = correction * cam_projection;
+	Projection projection = correction * cam_projection;
 
 	//store camera into ubo
 	RendererRD::MaterialStorage::store_camera(projection, ubo.projection_matrix);
