@@ -720,6 +720,9 @@ Projection Projection::operator*(const Projection &p_matrix) const {
 }
 
 void Projection::set_depth_correction(bool p_flip_y, bool p_reverse_z, bool p_remap_z, bool p_restore) {
+	// When p_restore is true, a matrix that restores the corresponding operation will be created based on the parameters.
+	// When p_restore is true, if p_flip_y is true the y-value will flip again. If p_reverse_z is true the z-value is reversed again. If p_remap_z is true, the z-value will be transformed into "z * 2 - 1".
+
 	real_t *m = &columns[0][0];
 
 	m[0] = 1;

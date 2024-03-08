@@ -465,7 +465,6 @@ void vertex_shader(vec3 vertex_input,
 	vtx.xy /= 1.0 - vtx.z;
 	vtx.z = (distance / scene_data.z_far);
 	vtx.z = vtx.z * 2.0 - 1.0;
-	vtx.z = -vtx.z;
 	vertex_interp = vtx;
 
 #endif

@@ -454,7 +454,7 @@ float light_process_omni_shadow(uint idx, vec3 vertex, vec3 normal) {
 			vec3 v0 = abs(basis_normal.z) < 0.999 ? vec3(0.0, 0.0, 1.0) : vec3(0.0, 1.0, 0.0);
 			vec3 tangent = normalize(cross(v0, basis_normal));
 			vec3 bitangent = normalize(cross(tangent, basis_normal));
-			float z_norm = shadow_len * omni_lights.data[idx].inv_radius;
+			float z_norm = 1.0 - shadow_len * omni_lights.data[idx].inv_radius;
 
 			tangent *= omni_lights.data[idx].soft_shadow_size * omni_lights.data[idx].soft_shadow_scale;
 			bitangent *= omni_lights.data[idx].soft_shadow_size * omni_lights.data[idx].soft_shadow_scale;
@@ -479,7 +479,7 @@ float light_process_omni_shadow(uint idx, vec3 vertex, vec3 normal) {
 				pos.xy = uv_rect.xy + pos.xy * uv_rect.zw;
 
 				float d = textureLod(sampler2D(shadow_atlas, SAMPLER_LINEAR_CLAMP), pos.xy, 0.0).r;
-				if (d < z_norm) {
+				if (d > z_norm) {
 					blocker_average += d;
 					blocker_count += 1.0;
 				}
@@ -488,11 +488,11 @@ float light_process_omni_shadow(uint idx, vec3 vertex, vec3 normal) {
 			if (blocker_count > 0.0) {
 				//blockers found, do soft shadow
 				blocker_average /= blocker_count;
-				float penumbra = (z_norm - blocker_average) / blocker_average;
+				float penumbra = (z_norm + blocker_average) / blocker_average;
 				tangent *= penumbra;
 				bitangent *= penumbra;
 
-				z_norm -= omni_lights.data[idx].inv_radius * omni_lights.data[idx].shadow_bias;
+				z_norm += omni_lights.data[idx].inv_radius * omni_lights.data[idx].shadow_bias;
 
 				shadow = 0.0;
 				for (uint i = 0; i < sc_penumbra_shadow_samples; i++) {
@@ -513,7 +513,7 @@ float light_process_omni_shadow(uint idx, vec3 vertex, vec3 normal) {
 
 					pos.xy = pos.xy * 0.5 + 0.5;
 					pos.xy = uv_rect.xy + pos.xy * uv_rect.zw;
-					shadow += textureProj(sampler2DShadow(shadow_atlas, shadow_sampler), vec4(pos.xy, 1.0 - z_norm, 1.0));
+					shadow += textureProj(sampler2DShadow(shadow_atlas, shadow_sampler), vec4(pos.xy, z_norm, 1.0));
 				}
 
 				shadow /= float(sc_penumbra_shadow_samples);

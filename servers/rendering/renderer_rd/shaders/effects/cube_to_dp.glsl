@@ -78,7 +78,7 @@ void main() {
 
 	depth = 2.0 * depth - 1.0;
 	float linear_depth = 2.0 * params.z_near * params.z_far / (params.z_far + params.z_near + depth * (params.z_far - params.z_near));
-	depth = (linear_depth * depth_fix) / params.z_far;
-	//Because ndc space uses reversed-z, remains unified here.
-	gl_FragDepth = 1.0 - depth;
+	// linear_depth equal to view space depth
+	depth = (params.z_far - linear_depth * depth_fix) / params.z_far;
+	gl_FragDepth = depth;
 }

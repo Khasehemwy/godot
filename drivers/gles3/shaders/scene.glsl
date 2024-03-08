@@ -1712,8 +1712,7 @@ void main() {
 #ifdef MODE_RENDER_DEPTH
 #ifdef RENDER_SHADOWS_LINEAR
 	// Linearize the depth buffer if rendering cubemap shadows.
-	// Because ndc space uses reversed-z, remains unified here.
-	gl_FragDepth = 1.0 - (length(vertex) + scene_data.shadow_bias) / scene_data.z_far;
+	gl_FragDepth = (scene_data.z_far - (length(vertex) + scene_data.shadow_bias)) / scene_data.z_far;
 #endif
 
 // Nothing happens, so a tree-ssa optimizer will result in no fragment shader :)
@@ -1917,7 +1916,6 @@ void main() {
 	float omni_shadow = 1.0f;
 #ifndef SHADOWS_DISABLED
 	vec3 light_ray = ((positional_shadows[positional_shadow_index].shadow_matrix * vec4(shadow_coord.xyz, 1.0))).xyz;
-	// Because ndc space uses reversed-z, remains unified here.
 	omni_shadow = texture(omni_shadow_texture, vec4(light_ray, 1.0 - length(light_ray) * omni_lights[omni_light_index].inv_radius));
 	omni_shadow = mix(1.0, omni_shadow, omni_lights[omni_light_index].shadow_opacity);
 #endif // SHADOWS_DISABLED

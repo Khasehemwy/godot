@@ -2222,7 +2222,9 @@ void RasterizerSceneGLES3::_render_shadow_pass(RID p_light, RID p_shadow_atlas, 
 
 				glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, cube_map_faces[p_pass], shadow_texture, 0);
 
-				light_projection = light_storage->light_instance_get_shadow_camera(p_light, p_pass);
+				Projection correction;
+				correction.set_depth_correction(false, true, false, true);
+				light_projection = correction * light_storage->light_instance_get_shadow_camera(p_light, p_pass);
 				light_transform = light_storage->light_instance_get_shadow_transform(p_light, p_pass);
 				shadow_size = shadow_size / 2;
 			} else {
@@ -3521,8 +3523,6 @@ void RasterizerSceneGLES3::render_particle_collider_heightfield(RID p_collider, 
 	Vector3 extents = particles_storage->particles_collision_get_extents(p_collider) * p_transform.basis.get_scale();
 	Projection cm;
 	cm.set_orthogonal(-extents.x, extents.x, -extents.z, extents.z, 0, extents.y * 2.0);
-	//Projection correction;
-	//correction.set_depth_correction(false, true, false);
 
 	Vector3 cam_pos = p_transform.origin;
 	cam_pos.y += extents.y;
