@@ -39,6 +39,7 @@
 #include "core/io/file_access_pack.h"
 #include "core/io/marshalls.h"
 #include "core/os/keyboard.h"
+#include "core/templates/rb_set.h"
 #include "core/variant/typed_array.h"
 #include "core/variant/variant_parser.h"
 #include "core/version.h"
@@ -1093,7 +1094,7 @@ Error ProjectSettings::save_custom(const String &p_path, const CustomMap &p_cust
 	} else if (p_path.ends_with(".binary")) {
 		return _save_settings_binary(p_path, save_props, p_custom, save_features);
 	} else {
-		ERR_FAIL_V_MSG(ERR_FILE_UNRECOGNIZED, "Unknown config file format: " + p_path + ".");
+		ERR_FAIL_V_MSG(ERR_FILE_UNRECOGNIZED, "Unknown config file format: " + p_path);
 	}
 }
 
@@ -1318,6 +1319,26 @@ const HashMap<StringName, HashSet<StringName>> &ProjectSettings::get_scene_group
 	return scene_groups_cache;
 }
 
+#ifdef TOOLS_ENABLED
+void ProjectSettings::get_argument_options(const StringName &p_function, int p_idx, List<String> *r_options) const {
+	const String pf = p_function;
+	if (p_idx == 0) {
+		if (pf == "has_setting" || pf == "set_setting" || pf == "get_setting" || pf == "get_setting_with_override" ||
+				pf == "set_order" || pf == "get_order" || pf == "set_initial_value" || pf == "set_as_basic" ||
+				pf == "set_as_internal" || pf == "set_restart_if_changed" || pf == "clear") {
+			for (const KeyValue<StringName, VariantContainer> &E : props) {
+				if (E.value.hide_from_editor) {
+					continue;
+				}
+
+				r_options->push_back(String(E.key).quote());
+			}
+		}
+	}
+	Object::get_argument_options(p_function, p_idx, r_options);
+}
+#endif
+
 void ProjectSettings::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("has_setting", "name"), &ProjectSettings::has_setting);
 	ClassDB::bind_method(D_METHOD("set_setting", "name", "value"), &ProjectSettings::set_setting);
@@ -1514,6 +1535,7 @@ ProjectSettings::ProjectSettings() {
 	GLOBAL_DEF_INTERNAL("internationalization/locale/translation_remaps", PackedStringArray());
 	GLOBAL_DEF_INTERNAL("internationalization/locale/translations", PackedStringArray());
 	GLOBAL_DEF_INTERNAL("internationalization/locale/translations_pot_files", PackedStringArray());
+	GLOBAL_DEF_INTERNAL("internationalization/locale/translation_add_builtin_strings_to_pot", false);
 
 	ProjectSettings::get_singleton()->add_hidden_prefix("input/");
 }

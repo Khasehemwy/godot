@@ -405,6 +405,10 @@ bool CSharpLanguage::supports_builtin_mode() const {
 	return false;
 }
 
+ScriptLanguage::ScriptNameCasing CSharpLanguage::preferred_file_name_casing() const {
+	return SCRIPT_NAME_CASING_PASCAL_CASE;
+}
+
 #ifdef TOOLS_ENABLED
 struct VariantCsName {
 	Variant::Type variant_type;
@@ -2851,7 +2855,24 @@ Ref<Resource> ResourceFormatLoaderCSharpScript::load(const String &p_path, const
 	ERR_FAIL_COND_V_MSG(!scr->get_path().is_empty() && scr->get_path() != p_original_path, Ref<Resource>(),
 			"The C# script path is different from the path it was registered in the C# dictionary.");
 
-	scr->set_path(p_original_path, true);
+	Ref<Resource> existing = ResourceCache::get_ref(p_path);
+	switch (p_cache_mode) {
+		case ResourceFormatLoader::CACHE_MODE_IGNORE:
+		case ResourceFormatLoader::CACHE_MODE_IGNORE_DEEP:
+			break;
+		case ResourceFormatLoader::CACHE_MODE_REUSE:
+			if (existing.is_null()) {
+				scr->set_path(p_original_path);
+			} else {
+				scr = existing;
+			}
+			break;
+		case ResourceFormatLoader::CACHE_MODE_REPLACE:
+		case ResourceFormatLoader::CACHE_MODE_REPLACE_DEEP:
+			scr->set_path(p_original_path, true);
+			break;
+	}
+
 	scr->reload();
 
 	if (r_error) {

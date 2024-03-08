@@ -47,7 +47,7 @@ Files extracted from upstream source:
 ## astcenc
 
 - Upstream: https://github.com/ARM-software/astc-encoder
-- Version: 4.4.0 (5a5b5a1ef60dd47c27c28c66c118d22c40e3197e, 2023)
+- Version: 4.7.0 (1a51f2915121275038677317c8bf61f1a78b590c, 2024)
 - License: Apache 2.0
 
 Files extracted from upstream source:
@@ -724,7 +724,7 @@ with the provided patch.
 ## openxr
 
 - Upstream: https://github.com/KhronosGroup/OpenXR-SDK
-- Version: 1.0.33 (dc1e23937fe45eabcce80f6588cf47449edb29d1, 2024)
+- Version: 1.0.34 (288d3a7ebc1ad959f62d51da75baa3d27438c499, 2024)
 - License: Apache 2.0
 
 Files extracted from upstream source:
@@ -844,7 +844,7 @@ comments and a patch is provided in the squish/ folder.
 ## tinyexr
 
 - Upstream: https://github.com/syoyo/tinyexr
-- Version: 1.0.5 (3627ab3060592468d49547b4cdf5353e9e2b50dc, 2023)
+- Version: 1.0.8 (6c8742cc8145c8f629698cd8248900990946d6b1, 2024)
 - License: BSD-3-Clause
 
 Files extracted from upstream source:
@@ -865,6 +865,18 @@ Files extracted from upstream source:
 
 See `thorvg/update-thorvg.sh` for extraction instructions. Set the version
 number and run the script and apply patches from the `patches` folder.
+
+
+## ufbx
+
+- Upstream: https://github.com/ufbx/ufbx
+- Version: git (v0.11.1, 2024)
+- License: MIT
+
+Files extracted from upstream source:
+
+- `ufbx.{c,h}`
+- `LICENSE`
 
 
 ## vhacd

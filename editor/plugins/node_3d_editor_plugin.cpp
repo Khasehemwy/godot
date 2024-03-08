@@ -78,11 +78,11 @@
 #include "editor/plugins/node_3d_editor_gizmos.h"
 #include "editor/scene_tree_dock.h"
 #include "scene/3d/camera_3d.h"
-#include "scene/3d/collision_shape_3d.h"
 #include "scene/3d/decal.h"
 #include "scene/3d/light_3d.h"
 #include "scene/3d/mesh_instance_3d.h"
-#include "scene/3d/physics_body_3d.h"
+#include "scene/3d/physics/collision_shape_3d.h"
+#include "scene/3d/physics/physics_body_3d.h"
 #include "scene/3d/visual_instance_3d.h"
 #include "scene/3d/world_environment.h"
 #include "scene/gui/center_container.h"
@@ -90,8 +90,8 @@
 #include "scene/gui/flow_container.h"
 #include "scene/gui/split_container.h"
 #include "scene/gui/subviewport_container.h"
+#include "scene/resources/3d/sky_material.h"
 #include "scene/resources/packed_scene.h"
-#include "scene/resources/sky_material.h"
 #include "scene/resources/surface_tool.h"
 
 constexpr real_t DISTANCE_DEFAULT = 4;
@@ -2663,7 +2663,7 @@ void Node3DEditorViewport::_update_freelook(real_t delta) {
 	cursor.eye_pos += motion;
 }
 
-void Node3DEditorViewport::set_message(String p_message, float p_time) {
+void Node3DEditorViewport::set_message(const String &p_message, float p_time) {
 	message = p_message;
 	message_time = p_time;
 }
@@ -2972,6 +2972,10 @@ void Node3DEditorViewport::_notification(int p_what) {
 			}
 			if (preview_node->is_inside_tree()) {
 				preview_node_pos = spatial_editor->snap_point(_get_instance_position(preview_node_viewport_pos));
+				double snap = EDITOR_GET("interface/inspector/default_float_step");
+				int snap_step_decimals = Math::range_step_decimals(snap);
+				set_message(TTR("Instantiating:") + " (" + String::num(preview_node_pos.x, snap_step_decimals) + ", " +
+						String::num(preview_node_pos.y, snap_step_decimals) + ", " + String::num(preview_node_pos.z, snap_step_decimals) + ")");
 				Transform3D preview_gl_transform = Transform3D(Basis(), preview_node_pos);
 				preview_node->set_global_transform(preview_gl_transform);
 				if (!preview_node->is_visible()) {
@@ -3445,7 +3449,8 @@ void Node3DEditorViewport::_menu_option(int p_option) {
 			int idx = view_menu->get_popup()->get_item_index(VIEW_GIZMOS);
 			bool current = view_menu->get_popup()->is_item_checked(idx);
 			current = !current;
-			uint32_t layers = ((1 << 20) - 1) | (1 << (GIZMO_BASE_LAYER + index)) | (1 << GIZMO_GRID_LAYER) | (1 << MISC_TOOL_LAYER);
+			uint32_t layers = camera->get_cull_mask();
+			layers &= ~(1 << GIZMO_EDIT_LAYER);
 			if (current) {
 				layers |= (1 << GIZMO_EDIT_LAYER);
 			}
@@ -3469,7 +3474,18 @@ void Node3DEditorViewport::_menu_option(int p_option) {
 			int idx = view_menu->get_popup()->get_item_index(VIEW_FRAME_TIME);
 			bool current = view_menu->get_popup()->is_item_checked(idx);
 			view_menu->get_popup()->set_item_checked(idx, !current);
-
+		} break;
+		case VIEW_GRID: {
+			int idx = view_menu->get_popup()->get_item_index(VIEW_GRID);
+			bool current = view_menu->get_popup()->is_item_checked(idx);
+			current = !current;
+			uint32_t layers = camera->get_cull_mask();
+			layers &= ~(1 << GIZMO_GRID_LAYER);
+			if (current) {
+				layers |= (1 << GIZMO_GRID_LAYER);
+			}
+			camera->set_cull_mask(layers);
+			view_menu->get_popup()->set_item_checked(idx, current);
 		} break;
 		case VIEW_DISPLAY_NORMAL:
 		case VIEW_DISPLAY_WIREFRAME:
@@ -4201,6 +4217,7 @@ void Node3DEditorViewport::_create_preview_node(const Vector<String> &files) con
 }
 
 void Node3DEditorViewport::_remove_preview_node() {
+	set_message("");
 	if (preview_node->get_parent()) {
 		for (int i = preview_node->get_child_count() - 1; i >= 0; i--) {
 			Node *node = preview_node->get_child(i);
@@ -4464,23 +4481,14 @@ bool Node3DEditorViewport::can_drop_data_fw(const Point2 &p_point, const Variant
 		if (d.has("type") && (String(d["type"]) == "files")) {
 			Vector<String> files = d["files"];
 
-			List<String> scene_extensions;
-			ResourceLoader::get_recognized_extensions_for_type("PackedScene", &scene_extensions);
-			List<String> mesh_extensions;
-			ResourceLoader::get_recognized_extensions_for_type("Mesh", &mesh_extensions);
-			List<String> material_extensions;
-			ResourceLoader::get_recognized_extensions_for_type("Material", &material_extensions);
-			List<String> texture_extensions;
-			ResourceLoader::get_recognized_extensions_for_type("Texture", &texture_extensions);
-
+			// Check if at least one of the dragged files is a mesh, material, texture or scene.
 			for (int i = 0; i < files.size(); i++) {
-				String extension = files[i].get_extension().to_lower();
+				bool is_scene = ClassDB::is_parent_class(ResourceLoader::get_resource_type(files[i]), "PackedScene");
+				bool is_mesh = ClassDB::is_parent_class(ResourceLoader::get_resource_type(files[i]), "Mesh");
+				bool is_material = ClassDB::is_parent_class(ResourceLoader::get_resource_type(files[i]), "Material");
+				bool is_texture = ClassDB::is_parent_class(ResourceLoader::get_resource_type(files[i]), "Texture");
 
-				// Check if dragged files with mesh or scene extension can be created at least once.
-				if (mesh_extensions.find(extension) ||
-						scene_extensions.find(extension) ||
-						material_extensions.find(extension) ||
-						texture_extensions.find(extension)) {
+				if (is_mesh || is_scene || is_material || is_texture) {
 					Ref<Resource> res = ResourceLoader::load(files[i]);
 					if (res.is_null()) {
 						continue;
@@ -5142,6 +5150,7 @@ Node3DEditorViewport::Node3DEditorViewport(Node3DEditor *p_spatial_editor, int p
 	view_menu->get_popup()->add_separator();
 	view_menu->get_popup()->add_check_shortcut(ED_SHORTCUT("spatial_editor/view_environment", TTR("View Environment")), VIEW_ENVIRONMENT);
 	view_menu->get_popup()->add_check_shortcut(ED_SHORTCUT("spatial_editor/view_gizmos", TTR("View Gizmos")), VIEW_GIZMOS);
+	view_menu->get_popup()->add_check_shortcut(ED_SHORTCUT("spatial_editor/view_grid_lines", TTR("View Grid")), VIEW_GRID);
 	view_menu->get_popup()->add_check_shortcut(ED_SHORTCUT("spatial_editor/view_information", TTR("View Information")), VIEW_INFORMATION);
 	view_menu->get_popup()->add_check_shortcut(ED_SHORTCUT("spatial_editor/view_fps", TTR("View Frame Time")), VIEW_FRAME_TIME);
 	view_menu->get_popup()->set_item_checked(view_menu->get_popup()->get_item_index(VIEW_ENVIRONMENT), true);
@@ -5151,6 +5160,7 @@ Node3DEditorViewport::Node3DEditorViewport(Node3DEditor *p_spatial_editor, int p
 	view_menu->get_popup()->add_check_shortcut(ED_SHORTCUT("spatial_editor/view_audio_listener", TTR("Audio Listener")), VIEW_AUDIO_LISTENER);
 	view_menu->get_popup()->add_check_shortcut(ED_SHORTCUT("spatial_editor/view_audio_doppler", TTR("Enable Doppler")), VIEW_AUDIO_DOPPLER);
 	view_menu->get_popup()->set_item_checked(view_menu->get_popup()->get_item_index(VIEW_GIZMOS), true);
+	view_menu->get_popup()->set_item_checked(view_menu->get_popup()->get_item_index(VIEW_GRID), true);
 
 	view_menu->get_popup()->add_separator();
 	view_menu->get_popup()->add_check_shortcut(ED_SHORTCUT("spatial_editor/view_cinematic_preview", TTR("Cinematic Preview")), VIEW_CINEMATIC_PREVIEW);
@@ -8325,6 +8335,7 @@ Node3DEditor::Node3DEditor() {
 	tool_button[TOOL_MODE_MOVE]->connect("pressed", callable_mp(this, &Node3DEditor::_menu_item_pressed).bind(MENU_TOOL_MOVE));
 	tool_button[TOOL_MODE_MOVE]->set_shortcut(ED_SHORTCUT("spatial_editor/tool_move", TTR("Move Mode"), Key::W));
 	tool_button[TOOL_MODE_MOVE]->set_shortcut_context(this);
+	tool_button[TOOL_MODE_MOVE]->set_tooltip_text(keycode_get_string((Key)KeyModifierMask::CMD_OR_CTRL) + TTR("Drag: Use snap.") + "\n" + TTR("Alt+RMB: Show list of all nodes at position clicked, including locked."));
 
 	tool_button[TOOL_MODE_ROTATE] = memnew(Button);
 	main_menu_hbox->add_child(tool_button[TOOL_MODE_ROTATE]);
@@ -8333,6 +8344,7 @@ Node3DEditor::Node3DEditor() {
 	tool_button[TOOL_MODE_ROTATE]->connect("pressed", callable_mp(this, &Node3DEditor::_menu_item_pressed).bind(MENU_TOOL_ROTATE));
 	tool_button[TOOL_MODE_ROTATE]->set_shortcut(ED_SHORTCUT("spatial_editor/tool_rotate", TTR("Rotate Mode"), Key::E));
 	tool_button[TOOL_MODE_ROTATE]->set_shortcut_context(this);
+	tool_button[TOOL_MODE_ROTATE]->set_tooltip_text(keycode_get_string((Key)KeyModifierMask::CMD_OR_CTRL) + TTR("Drag: Use snap.") + "\n" + TTR("Alt+RMB: Show list of all nodes at position clicked, including locked."));
 
 	tool_button[TOOL_MODE_SCALE] = memnew(Button);
 	main_menu_hbox->add_child(tool_button[TOOL_MODE_SCALE]);
@@ -8341,6 +8353,7 @@ Node3DEditor::Node3DEditor() {
 	tool_button[TOOL_MODE_SCALE]->connect("pressed", callable_mp(this, &Node3DEditor::_menu_item_pressed).bind(MENU_TOOL_SCALE));
 	tool_button[TOOL_MODE_SCALE]->set_shortcut(ED_SHORTCUT("spatial_editor/tool_scale", TTR("Scale Mode"), Key::R));
 	tool_button[TOOL_MODE_SCALE]->set_shortcut_context(this);
+	tool_button[TOOL_MODE_SCALE]->set_tooltip_text(keycode_get_string((Key)KeyModifierMask::CMD_OR_CTRL) + TTR("Drag: Use snap.") + "\n" + TTR("Alt+RMB: Show list of all nodes at position clicked, including locked."));
 
 	main_menu_hbox->add_child(memnew(VSeparator));
 

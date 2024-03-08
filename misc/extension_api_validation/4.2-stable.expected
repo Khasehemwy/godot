@@ -204,3 +204,39 @@ Validate extension JSON: Error: Field 'classes/Window/methods/has_theme_stylebox
 Fix the default parameter value for StringName and Variant.
 The changes to StringName parameters should be equivalent to the previous default values.
 The change to the Variant parameter in 'add_code_completion_option' breaks behavior compatibility.
+
+
+GH-81746
+--------
+Validate extension JSON: API was removed: classes/EditorSceneFormatImporterFBX
+
+Renamed to EditorSceneFormatImporterFBX2GLTF.
+
+The compat breakage was deemed necessary as this is a class most users wouldn't
+use directly, and the name needs to be disambiguated with the new
+EditorSceneFormatImporterUFBX.
+
+
+GH-88791
+--------
+Validate extension JSON: JSON file: Field was added in a way that breaks compatibility 'classes/Skeleton3D/methods/add_bone': return_value
+
+Added a return value for add_bone.
+Should not affect existing regular use - the return value would just be unused.
+Compatibility method registered.
+
+
+GH-89024
+--------
+Validate extension JSON: Error: Field 'classes/RichTextLabel/methods/push_meta/arguments': size changed value in new API, from 1 to 2.
+
+Added optional argument. Compatibility method registered.
+
+
+GH-88081
+--------
+Validate extension JSON: Error: Field 'classes/EditorPlugin/methods/add_control_to_bottom_panel/arguments': size changed value in new API, from 2 to 3.
+Validate extension JSON: Error: Field 'classes/EditorPlugin/methods/add_control_to_dock/arguments': size changed value in new API, from 2 to 3.
+
+Added optional argument to add_control_to_bottom_panel and add_control_to_dock to specify a shortcut that toggles the bottom panel/dock's visibility.
+Compatibility method registered.

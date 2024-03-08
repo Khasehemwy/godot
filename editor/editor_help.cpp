@@ -35,6 +35,7 @@
 #include "core/input/input.h"
 #include "core/object/script_language.h"
 #include "core/os/keyboard.h"
+#include "core/string/string_builder.h"
 #include "core/version.h"
 #include "editor/doc_data_compressed.gen.h"
 #include "editor/editor_node.h"
@@ -290,6 +291,8 @@ void EditorHelp::_class_desc_select(const String &p_select) {
 		}
 	} else if (p_select.begins_with("http")) {
 		OS::get_singleton()->shell_open(p_select);
+	} else if (p_select.begins_with("^")) {
+		DisplayServer::get_singleton()->clipboard_set(p_select.trim_prefix("^"));
 	}
 }
 
@@ -1622,9 +1625,9 @@ void EditorHelp::_update_doc() {
 				enum_line[E.key] = class_desc->get_paragraph_count() - 2;
 				class_desc->push_color(theme_cache.title_color);
 				if (E.value.size() && E.value[0].is_bitfield) {
-					class_desc->add_text("flags  ");
+					class_desc->add_text("flags ");
 				} else {
-					class_desc->add_text("enum  ");
+					class_desc->add_text("enum ");
 				}
 				class_desc->pop(); // color
 
@@ -2384,6 +2387,8 @@ static void _add_text_to_rt(const String &p_bbcode, RichTextLabel *p_rt, Control
 	List<String> tag_stack;
 	bool code_tag = false;
 	bool codeblock_tag = false;
+	const bool using_tab_indent = int(EDITOR_GET("text_editor/behavior/indent/type")) == 0;
+	StringBuilder codeblock_text;
 
 	int pos = 0;
 	while (pos < bbcode.length()) {
@@ -2395,8 +2400,30 @@ static void _add_text_to_rt(const String &p_bbcode, RichTextLabel *p_rt, Control
 
 		if (brk_pos > pos) {
 			String text = bbcode.substr(pos, brk_pos - pos);
+			if (codeblock_tag && using_tab_indent) {
+				// Replace the code block's space indentation with tabs.
+				StringBuilder builder;
+				PackedStringArray text_lines = text.split("\n");
+				for (const String &line : text_lines) {
+					String stripped_line = line.dedent();
+					int space_count = line.length() - stripped_line.length();
+
+					if (builder.num_strings_appended() > 0) {
+						builder.append("\n");
+					}
+					if (space_count > 0) {
+						builder.append(String("\t").repeat(MAX(space_count / 4, 1)) + stripped_line);
+					} else {
+						builder.append(line);
+					}
+				}
+				text = builder.as_string();
+			}
 			if (!code_tag && !codeblock_tag) {
 				text = text.replace("\n", "\n\n");
+			}
+			if (codeblock_tag) {
+				codeblock_text.append(text);
 			}
 			p_rt->add_text(text);
 		}
@@ -2431,22 +2458,33 @@ static void _add_text_to_rt(const String &p_bbcode, RichTextLabel *p_rt, Control
 			tag_stack.pop_front();
 			pos = brk_end + 1;
 			if (tag != "/img") {
-				p_rt->pop();
 				if (code_tag) {
+					p_rt->pop(); // color
+					p_rt->pop(); // background color
 					p_rt->pop(); // font size
-					// Pop both color and background color.
-					p_rt->pop();
-					p_rt->pop();
 				} else if (codeblock_tag) {
+					p_rt->pop(); // color
+					p_rt->pop(); // cell
+
+					// Copy codeblock button.
+					p_rt->push_cell();
+					p_rt->set_cell_row_background_color(code_bg_color, Color(code_bg_color, 0.99));
+					p_rt->set_cell_padding(Rect2(0, 10 * EDSCALE, 0, 10 * EDSCALE));
+					p_rt->set_cell_size_override(Vector2(1, 1), Vector2(10, 10) * EDSCALE);
+					p_rt->push_meta("^" + codeblock_text.as_string(), RichTextLabel::META_UNDERLINE_ON_HOVER);
+					codeblock_text = StringBuilder();
+					p_rt->add_image(p_owner_node->get_editor_theme_icon(SNAME("ActionCopy")), 24 * EDSCALE, 24 * EDSCALE, Color(link_property_color, 0.3), INLINE_ALIGNMENT_BOTTOM_TO, Rect2(), Variant(), false, TTR("Click to copy."));
+					p_rt->pop(); // meta
+					p_rt->pop(); // cell
+
+					p_rt->pop(); // table
 					p_rt->pop(); // font size
-					// Pop color, cell and table.
-					p_rt->pop();
-					p_rt->pop();
-					p_rt->pop();
+
 					if (pos < bbcode.length()) {
 						p_rt->add_newline();
 					}
 				}
+				p_rt->pop(); // Pops font for codetags & codeblocks, anything else for other tags.
 			}
 			code_tag = false;
 			codeblock_tag = false;
@@ -2454,7 +2492,9 @@ static void _add_text_to_rt(const String &p_bbcode, RichTextLabel *p_rt, Control
 		} else if (code_tag || codeblock_tag) {
 			p_rt->add_text("[");
 			pos = brk_pos + 1;
-
+			if (codeblock_tag) {
+				codeblock_text.append("[");
+			}
 		} else if (tag.begins_with("method ") || tag.begins_with("constructor ") || tag.begins_with("operator ") || tag.begins_with("member ") || tag.begins_with("signal ") || tag.begins_with("enum ") || tag.begins_with("constant ") || tag.begins_with("annotation ") || tag.begins_with("theme_item ")) {
 			const int tag_end = tag.find_char(' ');
 			const String link_tag = tag.substr(0, tag_end);
@@ -2473,11 +2513,34 @@ static void _add_text_to_rt(const String &p_bbcode, RichTextLabel *p_rt, Control
 			} else if (link_tag == "annotation") {
 				target_color = link_annotation_color;
 			}
+
 			p_rt->push_color(target_color);
 			p_rt->push_meta("@" + link_tag + " " + link_target);
-			p_rt->add_text(link_target + (link_tag == "method" ? "()" : ""));
-			p_rt->pop();
-			p_rt->pop();
+
+			if (link_tag == "member" &&
+					((!link_target.contains(".") && (p_class == "ProjectSettings" || p_class == "EditorSettings")) ||
+							link_target.begins_with("ProjectSettings.") || link_target.begins_with("EditorSettings."))) {
+				// Special formatting for both ProjectSettings and EditorSettings.
+				String prefix;
+				if (link_target.begins_with("EditorSettings.")) {
+					prefix = "(" + TTR("Editor") + ") ";
+				}
+
+				const String setting_name = link_target.trim_prefix("ProjectSettings.").trim_prefix("EditorSettings.");
+				PackedStringArray setting_sections;
+				for (const String &section : setting_name.split("/", false)) {
+					setting_sections.append(EditorPropertyNameProcessor::get_singleton()->process_name(section, EditorPropertyNameProcessor::get_settings_style()));
+				}
+
+				p_rt->push_bold();
+				p_rt->add_text(prefix + String(" > ").join(setting_sections));
+				p_rt->pop(); // bold
+			} else {
+				p_rt->add_text(link_target + (link_tag == "method" ? "()" : ""));
+			}
+
+			p_rt->pop(); // meta
+			p_rt->pop(); // color
 
 			p_rt->pop(); // font size
 			p_rt->pop(); // font
@@ -2554,7 +2617,7 @@ static void _add_text_to_rt(const String &p_bbcode, RichTextLabel *p_rt, Control
 			p_rt->push_font(doc_code_font);
 			p_rt->push_font_size(doc_code_font_size);
 
-			p_rt->push_table(1);
+			p_rt->push_table(2);
 			p_rt->push_cell();
 			p_rt->set_cell_row_background_color(code_bg_color, Color(code_bg_color, 0.99));
 			p_rt->set_cell_padding(Rect2(10 * EDSCALE, 10 * EDSCALE, 10 * EDSCALE, 10 * EDSCALE));
@@ -2934,6 +2997,7 @@ EditorHelp::EditorHelp() {
 	EDITOR_DEF("text_editor/help/sort_functions_alphabetically", true);
 
 	class_desc = memnew(RichTextLabel);
+	class_desc->set_tab_size(8);
 	add_child(class_desc);
 	class_desc->set_threaded(true);
 	class_desc->set_v_size_flags(SIZE_EXPAND_FILL);

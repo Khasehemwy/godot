@@ -73,7 +73,7 @@ using namespace godot;
 
 /*************************************************************************/
 
-#define OT_TAG(c1, c2, c3, c4) ((int32_t)((((uint32_t)(c1)&0xff) << 24) | (((uint32_t)(c2)&0xff) << 16) | (((uint32_t)(c3)&0xff) << 8) | ((uint32_t)(c4)&0xff)))
+#define OT_TAG(c1, c2, c3, c4) ((int32_t)((((uint32_t)(c1) & 0xff) << 24) | (((uint32_t)(c2) & 0xff) << 16) | (((uint32_t)(c3) & 0xff) << 8) | ((uint32_t)(c4) & 0xff)))
 
 bool TextServerFallback::_has_feature(Feature p_feature) const {
 	switch (p_feature) {
@@ -3367,6 +3367,10 @@ RID TextServerFallback::_shaped_text_substr(const RID &p_shaped, int64_t p_start
 		for (int i = 0; i < sd_size; i++) {
 			if ((sd_glyphs[i].start >= new_sd->start) && (sd_glyphs[i].end <= new_sd->end)) {
 				Glyph gl = sd_glyphs[i];
+				if (gl.end == p_start + p_length && ((gl.flags & GRAPHEME_IS_SOFT_HYPHEN) == GRAPHEME_IS_SOFT_HYPHEN)) {
+					gl.index = 0x00ad;
+					gl.advance = font_get_glyph_advance(gl.font_rid, gl.font_size, 0x00ad).x;
+				}
 				Variant key;
 				bool find_embedded = false;
 				if (gl.count == 1) {
@@ -3480,22 +3484,22 @@ double TextServerFallback::_shaped_text_fit_to_width(const RID &p_shaped, double
 
 	if (p_jst_flags.has_flag(JUSTIFICATION_TRIM_EDGE_SPACES)) {
 		// Trim spaces.
-		while ((start_pos < end_pos) && ((sd->glyphs[start_pos].flags & GRAPHEME_IS_SPACE) == GRAPHEME_IS_SPACE || (sd->glyphs[start_pos].flags & GRAPHEME_IS_BREAK_HARD) == GRAPHEME_IS_BREAK_HARD || (sd->glyphs[start_pos].flags & GRAPHEME_IS_BREAK_SOFT) == GRAPHEME_IS_BREAK_SOFT)) {
+		while ((start_pos < end_pos) && ((sd->glyphs[start_pos].flags & GRAPHEME_IS_SOFT_HYPHEN) != GRAPHEME_IS_SOFT_HYPHEN) && ((sd->glyphs[start_pos].flags & GRAPHEME_IS_SPACE) == GRAPHEME_IS_SPACE || (sd->glyphs[start_pos].flags & GRAPHEME_IS_BREAK_HARD) == GRAPHEME_IS_BREAK_HARD || (sd->glyphs[start_pos].flags & GRAPHEME_IS_BREAK_SOFT) == GRAPHEME_IS_BREAK_SOFT)) {
 			justification_width -= sd->glyphs[start_pos].advance * sd->glyphs[start_pos].repeat;
 			sd->glyphs.write[start_pos].advance = 0;
 			start_pos += sd->glyphs[start_pos].count;
 		}
-		while ((start_pos < end_pos) && ((sd->glyphs[end_pos].flags & GRAPHEME_IS_SPACE) == GRAPHEME_IS_SPACE || (sd->glyphs[end_pos].flags & GRAPHEME_IS_BREAK_HARD) == GRAPHEME_IS_BREAK_HARD || (sd->glyphs[end_pos].flags & GRAPHEME_IS_BREAK_SOFT) == GRAPHEME_IS_BREAK_SOFT)) {
+		while ((start_pos < end_pos) && ((sd->glyphs[end_pos].flags & GRAPHEME_IS_SOFT_HYPHEN) != GRAPHEME_IS_SOFT_HYPHEN) && ((sd->glyphs[end_pos].flags & GRAPHEME_IS_SPACE) == GRAPHEME_IS_SPACE || (sd->glyphs[end_pos].flags & GRAPHEME_IS_BREAK_HARD) == GRAPHEME_IS_BREAK_HARD || (sd->glyphs[end_pos].flags & GRAPHEME_IS_BREAK_SOFT) == GRAPHEME_IS_BREAK_SOFT)) {
 			justification_width -= sd->glyphs[end_pos].advance * sd->glyphs[end_pos].repeat;
 			sd->glyphs.write[end_pos].advance = 0;
 			end_pos -= sd->glyphs[end_pos].count;
 		}
 	} else {
 		// Skip breaks, but do not reset size.
-		while ((start_pos < end_pos) && ((sd->glyphs[start_pos].flags & GRAPHEME_IS_BREAK_HARD) == GRAPHEME_IS_BREAK_HARD)) {
+		while ((start_pos < end_pos) && ((sd->glyphs[start_pos].flags & GRAPHEME_IS_SOFT_HYPHEN) != GRAPHEME_IS_SOFT_HYPHEN) && ((sd->glyphs[start_pos].flags & GRAPHEME_IS_BREAK_HARD) == GRAPHEME_IS_BREAK_HARD || (sd->glyphs[start_pos].flags & GRAPHEME_IS_BREAK_SOFT) == GRAPHEME_IS_BREAK_SOFT)) {
 			start_pos += sd->glyphs[start_pos].count;
 		}
-		while ((start_pos < end_pos) && ((sd->glyphs[end_pos].flags & GRAPHEME_IS_BREAK_HARD) == GRAPHEME_IS_BREAK_HARD)) {
+		while ((start_pos < end_pos) && ((sd->glyphs[end_pos].flags & GRAPHEME_IS_SOFT_HYPHEN) != GRAPHEME_IS_SOFT_HYPHEN) && ((sd->glyphs[end_pos].flags & GRAPHEME_IS_BREAK_HARD) == GRAPHEME_IS_BREAK_HARD || (sd->glyphs[end_pos].flags & GRAPHEME_IS_BREAK_SOFT) == GRAPHEME_IS_BREAK_SOFT)) {
 			end_pos -= sd->glyphs[end_pos].count;
 		}
 	}
@@ -3504,7 +3508,7 @@ double TextServerFallback::_shaped_text_fit_to_width(const RID &p_shaped, double
 	for (int i = start_pos; i <= end_pos; i++) {
 		const Glyph &gl = sd->glyphs[i];
 		if (gl.count > 0) {
-			if ((gl.flags & GRAPHEME_IS_SPACE) == GRAPHEME_IS_SPACE && (gl.flags & GRAPHEME_IS_PUNCTUATION) != GRAPHEME_IS_PUNCTUATION) {
+			if ((gl.flags & GRAPHEME_IS_SOFT_HYPHEN) != GRAPHEME_IS_SOFT_HYPHEN && (gl.flags & GRAPHEME_IS_SPACE) == GRAPHEME_IS_SPACE && (gl.flags & GRAPHEME_IS_PUNCTUATION) != GRAPHEME_IS_PUNCTUATION) {
 				space_count++;
 			}
 		}
@@ -3515,7 +3519,7 @@ double TextServerFallback::_shaped_text_fit_to_width(const RID &p_shaped, double
 		for (int i = start_pos; i <= end_pos; i++) {
 			Glyph &gl = sd->glyphs.write[i];
 			if (gl.count > 0) {
-				if ((gl.flags & GRAPHEME_IS_SPACE) == GRAPHEME_IS_SPACE && (gl.flags & GRAPHEME_IS_PUNCTUATION) != GRAPHEME_IS_PUNCTUATION) {
+				if ((gl.flags & GRAPHEME_IS_SOFT_HYPHEN) != GRAPHEME_IS_SOFT_HYPHEN && (gl.flags & GRAPHEME_IS_SPACE) == GRAPHEME_IS_SPACE && (gl.flags & GRAPHEME_IS_PUNCTUATION) != GRAPHEME_IS_PUNCTUATION) {
 					double old_adv = gl.advance;
 					gl.advance = MAX(gl.advance + delta_width_per_space, Math::round(0.1 * gl.font_size));
 					justification_width += (gl.advance - old_adv);
@@ -3613,6 +3617,7 @@ bool TextServerFallback::_shaped_text_update_breaks(const RID &p_shaped) {
 	for (int i = 0; i < sd_size; i++) {
 		if (sd_glyphs[i].count > 0) {
 			char32_t c = sd->text[sd_glyphs[i].start - sd->start];
+			char32_t c_next = i < sd_size ? sd->text[sd_glyphs[i].start - sd->start + 1] : 0x0000;
 			if (c_punct_size == 0) {
 				if (is_punct(c) && c != 0x005F && c != ' ') {
 					sd_glyphs[i].flags |= GRAPHEME_IS_PUNCTUATION;
@@ -3636,10 +3641,15 @@ bool TextServerFallback::_shaped_text_update_breaks(const RID &p_shaped) {
 			}
 			if (is_linebreak(c)) {
 				sd_glyphs[i].flags |= GRAPHEME_IS_SPACE;
-				sd_glyphs[i].flags |= GRAPHEME_IS_BREAK_HARD;
+				if (c != 0x000D || c_next != 0x000A) { // Skip first hard break in CR-LF pair.
+					sd_glyphs[i].flags |= GRAPHEME_IS_BREAK_HARD;
+				}
 			}
 			if (c == 0x0009 || c == 0x000b) {
 				sd_glyphs[i].flags |= GRAPHEME_IS_TAB;
+			}
+			if (c == 0x00ad) {
+				sd_glyphs[i].flags |= GRAPHEME_IS_SOFT_HYPHEN;
 			}
 
 			i += (sd_glyphs[i].count - 1);

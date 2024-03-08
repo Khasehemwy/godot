@@ -33,6 +33,7 @@
 #include "editor/editor_settings.h"
 #include "editor/import/dynamic_font_import_settings.h"
 #include "editor/themes/editor_scale.h"
+#include "scene/gui/margin_container.h"
 
 /*************************************************************************/
 /*  EditorPropertyFontMetaObject                                         */
@@ -162,7 +163,7 @@ void EditorPropertyFontMetaOverride::_notification(int p_what) {
 	}
 }
 
-void EditorPropertyFontMetaOverride::_property_changed(const String &p_property, Variant p_value, const String &p_name, bool p_changing) {
+void EditorPropertyFontMetaOverride::_property_changed(const String &p_property, const Variant &p_value, const String &p_name, bool p_changing) {
 	if (p_property.begins_with("keys")) {
 		Dictionary dict = object->get_dict();
 		String key = p_property.get_slice("/", 1);
@@ -390,7 +391,7 @@ void EditorPropertyOTVariation::_notification(int p_what) {
 	}
 }
 
-void EditorPropertyOTVariation::_property_changed(const String &p_property, Variant p_value, const String &p_name, bool p_changing) {
+void EditorPropertyOTVariation::_property_changed(const String &p_property, const Variant &p_value, const String &p_name, bool p_changing) {
 	if (p_property.begins_with("keys")) {
 		Dictionary dict = object->get_dict();
 		Dictionary defaults_dict = object->get_defaults();
@@ -558,7 +559,7 @@ void EditorPropertyOTFeatures::_notification(int p_what) {
 	}
 }
 
-void EditorPropertyOTFeatures::_property_changed(const String &p_property, Variant p_value, const String &p_name, bool p_changing) {
+void EditorPropertyOTFeatures::_property_changed(const String &p_property, const Variant &p_value, const String &p_name, bool p_changing) {
 	if (p_property.begins_with("keys")) {
 		Dictionary dict = object->get_dict();
 		int key = p_property.get_slice("/", 1).to_int();

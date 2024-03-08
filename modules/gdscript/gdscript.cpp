@@ -1405,16 +1405,11 @@ String GDScript::debug_get_script_name(const Ref<Script> &p_script) {
 }
 #endif
 
-bool GDScript::is_equal_gdscript_paths(const String &p_path_a, const String &p_path_b) {
-	String path_a = p_path_a;
-	if (path_a.get_extension() == "gdc") {
-		path_a = path_a.get_basename() + ".gd";
+String GDScript::canonicalize_path(const String &p_path) {
+	if (p_path.get_extension() == "gdc") {
+		return p_path.get_basename() + ".gd";
 	}
-	String path_b = p_path_b;
-	if (path_b.get_extension() == "gdc") {
-		path_b = path_b.get_basename() + ".gd";
-	}
-	return path_a == path_b;
+	return p_path;
 }
 
 GDScript::UpdatableFuncPtr::UpdatableFuncPtr(GDScriptFunction *p_function) {
@@ -2822,11 +2817,12 @@ Ref<GDScript> GDScriptLanguage::get_script_by_fully_qualified_name(const String 
 
 Ref<Resource> ResourceFormatLoaderGDScript::load(const String &p_path, const String &p_original_path, Error *r_error, bool p_use_sub_threads, float *r_progress, CacheMode p_cache_mode) {
 	Error err;
-	Ref<GDScript> scr = GDScriptCache::get_full_script(p_path, err, "", p_cache_mode == CACHE_MODE_IGNORE);
+	bool ignoring = p_cache_mode == CACHE_MODE_IGNORE || p_cache_mode == CACHE_MODE_IGNORE_DEEP;
+	Ref<GDScript> scr = GDScriptCache::get_full_script(p_original_path, err, "", ignoring);
 
 	if (err && scr.is_valid()) {
 		// If !scr.is_valid(), the error was likely from scr->load_source_code(), which already generates an error.
-		ERR_PRINT_ED(vformat(R"(Failed to load script "%s" with error "%s".)", p_path, error_names[err]));
+		ERR_PRINT_ED(vformat(R"(Failed to load script "%s" with error "%s".)", p_original_path, error_names[err]));
 	}
 
 	if (r_error) {

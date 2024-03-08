@@ -861,7 +861,7 @@ void CanvasItemEditor::_restore_canvas_item_state(const List<CanvasItem *> &p_ca
 	}
 }
 
-void CanvasItemEditor::_commit_canvas_item_state(const List<CanvasItem *> &p_canvas_items, String action_name, bool commit_bones) {
+void CanvasItemEditor::_commit_canvas_item_state(const List<CanvasItem *> &p_canvas_items, const String &action_name, bool commit_bones) {
 	List<CanvasItem *> modified_canvas_items;
 	for (CanvasItem *ci : p_canvas_items) {
 		Dictionary old_state = editor_selection->get_node_editor_data<CanvasItemEditorSelectedItem>(ci)->undo_state;
@@ -2640,6 +2640,38 @@ void CanvasItemEditor::_update_cursor() {
 	set_default_cursor_shape(c);
 }
 
+void CanvasItemEditor::_update_lock_and_group_button() {
+	bool all_locked = true;
+	bool all_group = true;
+	List<Node *> selection = editor_selection->get_selected_node_list();
+	if (selection.is_empty()) {
+		all_locked = false;
+		all_group = false;
+	} else {
+		for (Node *E : selection) {
+			CanvasItem *item = Object::cast_to<CanvasItem>(E);
+			if (item) {
+				if (all_locked && !item->has_meta("_edit_lock_")) {
+					all_locked = false;
+				}
+				if (all_group && !item->has_meta("_edit_group_")) {
+					all_group = false;
+				}
+			}
+			if (!all_locked && !all_group) {
+				break;
+			}
+		}
+	}
+
+	lock_button->set_visible(!all_locked);
+	lock_button->set_disabled(selection.is_empty());
+	unlock_button->set_visible(all_locked);
+	group_button->set_visible(!all_group);
+	group_button->set_disabled(selection.is_empty());
+	ungroup_button->set_visible(all_group);
+}
+
 Control::CursorShape CanvasItemEditor::get_cursor_shape(const Point2 &p_pos) const {
 	// Compute an eventual rotation of the cursor
 	const CursorShape rotation_array[4] = { CURSOR_HSIZE, CURSOR_BDIAGSIZE, CURSOR_VSIZE, CURSOR_FDIAGSIZE };
@@ -2708,7 +2740,7 @@ Control::CursorShape CanvasItemEditor::get_cursor_shape(const Point2 &p_pos) con
 	return c;
 }
 
-void CanvasItemEditor::_draw_text_at_position(Point2 p_position, String p_string, Side p_side) {
+void CanvasItemEditor::_draw_text_at_position(Point2 p_position, const String &p_string, Side p_side) {
 	Color color = get_theme_color(SNAME("font_color"), EditorStringName(Editor));
 	color.a = 0.8;
 	Ref<Font> font = get_theme_font(SNAME("font"), SNAME("Label"));
@@ -3684,65 +3716,63 @@ void CanvasItemEditor::_draw_hover() {
 	}
 }
 
-void CanvasItemEditor::_draw_transform_message() {
-	if (drag_type == DRAG_NONE || drag_selection.is_empty() || !drag_selection.front()->get()) {
-		return;
-	}
-	String transform_message;
-	Transform2D current_transform = drag_selection.front()->get()->get_global_transform();
+void CanvasItemEditor::_draw_message() {
+	if (drag_type != DRAG_NONE && !drag_selection.is_empty() && drag_selection.front()->get()) {
+		Transform2D current_transform = drag_selection.front()->get()->get_global_transform();
 
-	double snap = EDITOR_GET("interface/inspector/default_float_step");
-	int snap_step_decimals = Math::range_step_decimals(snap);
+		double snap = EDITOR_GET("interface/inspector/default_float_step");
+		int snap_step_decimals = Math::range_step_decimals(snap);
 #define FORMAT(value) (TS->format_number(String::num(value, snap_step_decimals)))
 
-	switch (drag_type) {
-		case DRAG_MOVE:
-		case DRAG_MOVE_X:
-		case DRAG_MOVE_Y: {
-			Vector2 delta = current_transform.get_origin() - original_transform.get_origin();
-			if (drag_type == DRAG_MOVE) {
-				transform_message = TTR("Moving:") + " (" + FORMAT(delta.x) + ", " + FORMAT(delta.y) + ") px";
-			} else if (drag_type == DRAG_MOVE_X) {
-				transform_message = TTR("Moving:") + " " + FORMAT(delta.x) + " px";
-			} else if (drag_type == DRAG_MOVE_Y) {
-				transform_message = TTR("Moving:") + " " + FORMAT(delta.y) + " px";
-			}
-		} break;
+		switch (drag_type) {
+			case DRAG_MOVE:
+			case DRAG_MOVE_X:
+			case DRAG_MOVE_Y: {
+				Vector2 delta = current_transform.get_origin() - original_transform.get_origin();
+				if (drag_type == DRAG_MOVE) {
+					message = TTR("Moving:") + " (" + FORMAT(delta.x) + ", " + FORMAT(delta.y) + ") px";
+				} else if (drag_type == DRAG_MOVE_X) {
+					message = TTR("Moving:") + " " + FORMAT(delta.x) + " px";
+				} else if (drag_type == DRAG_MOVE_Y) {
+					message = TTR("Moving:") + " " + FORMAT(delta.y) + " px";
+				}
+			} break;
 
-		case DRAG_ROTATE: {
-			real_t delta = Math::rad_to_deg(current_transform.get_rotation() - original_transform.get_rotation());
-			transform_message = TTR("Rotating:") + " " + FORMAT(delta) + String::utf8(" °");
-		} break;
+			case DRAG_ROTATE: {
+				real_t delta = Math::rad_to_deg(current_transform.get_rotation() - original_transform.get_rotation());
+				message = TTR("Rotating:") + " " + FORMAT(delta) + String::utf8(" °");
+			} break;
 
-		case DRAG_SCALE_X:
-		case DRAG_SCALE_Y:
-		case DRAG_SCALE_BOTH: {
-			Vector2 original_scale = (Math::is_zero_approx(original_transform.get_scale().x) || Math::is_zero_approx(original_transform.get_scale().y)) ? Vector2(CMP_EPSILON, CMP_EPSILON) : original_transform.get_scale();
-			Vector2 delta = current_transform.get_scale() / original_scale;
-			if (drag_type == DRAG_SCALE_BOTH) {
-				transform_message = TTR("Scaling:") + String::utf8(" ×(") + FORMAT(delta.x) + ", " + FORMAT(delta.y) + ")";
-			} else if (drag_type == DRAG_SCALE_X) {
-				transform_message = TTR("Scaling:") + String::utf8(" ×") + FORMAT(delta.x);
-			} else if (drag_type == DRAG_SCALE_Y) {
-				transform_message = TTR("Scaling:") + String::utf8(" ×") + FORMAT(delta.y);
-			}
-		} break;
+			case DRAG_SCALE_X:
+			case DRAG_SCALE_Y:
+			case DRAG_SCALE_BOTH: {
+				Vector2 original_scale = (Math::is_zero_approx(original_transform.get_scale().x) || Math::is_zero_approx(original_transform.get_scale().y)) ? Vector2(CMP_EPSILON, CMP_EPSILON) : original_transform.get_scale();
+				Vector2 delta = current_transform.get_scale() / original_scale;
+				if (drag_type == DRAG_SCALE_BOTH) {
+					message = TTR("Scaling:") + String::utf8(" ×(") + FORMAT(delta.x) + ", " + FORMAT(delta.y) + ")";
+				} else if (drag_type == DRAG_SCALE_X) {
+					message = TTR("Scaling:") + String::utf8(" ×") + FORMAT(delta.x);
+				} else if (drag_type == DRAG_SCALE_Y) {
+					message = TTR("Scaling:") + String::utf8(" ×") + FORMAT(delta.y);
+				}
+			} break;
 
-		default:
-			break;
-	}
+			default:
+				break;
+		}
 #undef FORMAT
+	}
 
-	if (transform_message.is_empty()) {
+	if (message.is_empty()) {
 		return;
 	}
 
 	Ref<Font> font = get_theme_font(SNAME("font"), SNAME("Label"));
 	int font_size = get_theme_font_size(SNAME("font_size"), SNAME("Label"));
 	Point2 msgpos = Point2(RULER_WIDTH + 5 * EDSCALE, viewport->get_size().y - 20 * EDSCALE);
-	viewport->draw_string(font, msgpos + Point2(1, 1), transform_message, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, Color(0, 0, 0, 0.8));
-	viewport->draw_string(font, msgpos + Point2(-1, -1), transform_message, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, Color(0, 0, 0, 0.8));
-	viewport->draw_string(font, msgpos, transform_message, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, Color(1, 1, 1, 1));
+	viewport->draw_string(font, msgpos + Point2(1, 1), message, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, Color(0, 0, 0, 0.8));
+	viewport->draw_string(font, msgpos + Point2(-1, -1), message, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, Color(0, 0, 0, 0.8));
+	viewport->draw_string(font, msgpos, message, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, Color(1, 1, 1, 1));
 }
 
 void CanvasItemEditor::_draw_locks_and_groups(Node *p_node, const Transform2D &p_parent_xform, const Transform2D &p_canvas_xform) {
@@ -3797,35 +3827,6 @@ void CanvasItemEditor::_draw_viewport() {
 	transform.columns[2] = -view_offset * zoom;
 	EditorNode::get_singleton()->get_scene_root()->set_global_canvas_transform(transform);
 
-	// hide/show buttons depending on the selection
-	bool all_locked = true;
-	bool all_group = true;
-	List<Node *> selection = editor_selection->get_selected_node_list();
-	if (selection.is_empty()) {
-		all_locked = false;
-		all_group = false;
-	} else {
-		for (Node *E : selection) {
-			if (Object::cast_to<CanvasItem>(E) && !Object::cast_to<CanvasItem>(E)->has_meta("_edit_lock_")) {
-				all_locked = false;
-				break;
-			}
-		}
-		for (Node *E : selection) {
-			if (Object::cast_to<CanvasItem>(E) && !Object::cast_to<CanvasItem>(E)->has_meta("_edit_group_")) {
-				all_group = false;
-				break;
-			}
-		}
-	}
-
-	lock_button->set_visible(!all_locked);
-	lock_button->set_disabled(selection.is_empty());
-	unlock_button->set_visible(all_locked);
-	group_button->set_visible(!all_group);
-	group_button->set_disabled(selection.is_empty());
-	ungroup_button->set_visible(all_group);
-
 	_draw_grid();
 	_draw_ruler_tool();
 	_draw_axis();
@@ -3856,7 +3857,7 @@ void CanvasItemEditor::_draw_viewport() {
 	_draw_smart_snapping();
 	_draw_focus();
 	_draw_hover();
-	_draw_transform_message();
+	_draw_message();
 }
 
 void CanvasItemEditor::update_viewport() {
@@ -3917,7 +3918,7 @@ void CanvasItemEditor::_notification(int p_what) {
 			EditorRunBar::get_singleton()->connect("stop_pressed", callable_mp(this, &CanvasItemEditor::_update_override_camera_button).bind(false));
 		} break;
 
-		case NOTIFICATION_PHYSICS_PROCESS: {
+		case NOTIFICATION_PROCESS: {
 			EditorNode::get_singleton()->get_scene_root()->set_snap_controls_to_pixels(GLOBAL_GET("gui/common/snap_controls_to_pixels"));
 
 			int nb_having_pivot = 0;
@@ -4029,6 +4030,7 @@ void CanvasItemEditor::_notification(int p_what) {
 }
 
 void CanvasItemEditor::_selection_changed() {
+	_update_lock_and_group_button();
 	if (!selected_from_canvas) {
 		_reset_drag();
 	}
@@ -4740,6 +4742,7 @@ void CanvasItemEditor::_focus_selection(int p_op) {
 }
 
 void CanvasItemEditor::_reset_drag() {
+	message = "";
 	drag_type = DRAG_NONE;
 	drag_selection.clear();
 }
@@ -5578,13 +5581,13 @@ bool CanvasItemEditorPlugin::handles(Object *p_object) const {
 void CanvasItemEditorPlugin::make_visible(bool p_visible) {
 	if (p_visible) {
 		canvas_item_editor->show();
-		canvas_item_editor->set_physics_process(true);
+		canvas_item_editor->set_process(true);
 		RenderingServer::get_singleton()->viewport_set_disable_2d(EditorNode::get_singleton()->get_scene_root()->get_viewport_rid(), false);
 		RenderingServer::get_singleton()->viewport_set_environment_mode(EditorNode::get_singleton()->get_scene_root()->get_viewport_rid(), RS::VIEWPORT_ENVIRONMENT_ENABLED);
 
 	} else {
 		canvas_item_editor->hide();
-		canvas_item_editor->set_physics_process(false);
+		canvas_item_editor->set_process(false);
 		RenderingServer::get_singleton()->viewport_set_disable_2d(EditorNode::get_singleton()->get_scene_root()->get_viewport_rid(), true);
 		RenderingServer::get_singleton()->viewport_set_environment_mode(EditorNode::get_singleton()->get_scene_root()->get_viewport_rid(), RS::VIEWPORT_ENVIRONMENT_DISABLED);
 	}
@@ -5693,6 +5696,7 @@ void CanvasItemEditorViewport::_create_preview(const Vector<String> &files) cons
 
 void CanvasItemEditorViewport::_remove_preview() {
 	if (preview_node->get_parent()) {
+		canvas_item_editor->message = "";
 		for (int i = preview_node->get_child_count() - 1; i >= 0; i--) {
 			Node *node = preview_node->get_child(i);
 			node->queue_free();
@@ -5901,50 +5905,59 @@ void CanvasItemEditorViewport::_perform_drop_data() {
 
 bool CanvasItemEditorViewport::can_drop_data(const Point2 &p_point, const Variant &p_data) const {
 	Dictionary d = p_data;
-	if (d.has("type")) {
-		if (String(d["type"]) == "files") {
-			Vector<String> files = d["files"];
-			bool can_instantiate = false;
+	if (!d.has("type") || (String(d["type"]) != "files")) {
+		label->hide();
+		return false;
+	}
 
-			List<String> scene_extensions;
-			ResourceLoader::get_recognized_extensions_for_type("PackedScene", &scene_extensions);
-			List<String> texture_extensions;
-			ResourceLoader::get_recognized_extensions_for_type("Texture2D", &texture_extensions);
+	Vector<String> files = d["files"];
+	bool can_instantiate = false;
 
-			for (int i = 0; i < files.size(); i++) {
-				String extension = files[i].get_extension().to_lower();
+	// Check if at least one of the dragged files is a texture or scene.
+	for (int i = 0; i < files.size(); i++) {
+		bool is_scene = ClassDB::is_parent_class(ResourceLoader::get_resource_type(files[i]), "PackedScene");
+		bool is_texture = ClassDB::is_parent_class(ResourceLoader::get_resource_type(files[i]), "Texture2D");
 
-				// Check if dragged files with texture or scene extension can be created at least once.
-				if (texture_extensions.find(extension) || scene_extensions.find(extension)) {
-					Ref<Resource> res = ResourceLoader::load(files[i]);
-					if (res.is_null()) {
-						continue;
-					}
-					Ref<PackedScene> scn = res;
-					if (scn.is_valid()) {
-						Node *instantiated_scene = scn->instantiate(PackedScene::GEN_EDIT_STATE_INSTANCE);
-						if (!instantiated_scene) {
-							continue;
-						}
-						memdelete(instantiated_scene);
-					}
-					can_instantiate = true;
-					break;
-				}
+		if (is_scene || is_texture) {
+			Ref<Resource> res = ResourceLoader::load(files[i]);
+			if (res.is_null()) {
+				continue;
 			}
-			if (can_instantiate) {
-				if (!preview_node->get_parent()) { // create preview only once
-					_create_preview(files);
+			Ref<PackedScene> scn = res;
+			if (scn.is_valid()) {
+				Node *instantiated_scene = scn->instantiate(PackedScene::GEN_EDIT_STATE_INSTANCE);
+				if (!instantiated_scene) {
+					continue;
 				}
-				Transform2D trans = canvas_item_editor->get_canvas_transform();
-				preview_node->set_position((p_point - trans.get_origin()) / trans.get_scale().x);
-				label->set_text(vformat(TTR("Adding %s..."), default_texture_node_type));
+				memdelete(instantiated_scene);
 			}
-			return can_instantiate;
+			can_instantiate = true;
+			break;
 		}
 	}
-	label->hide();
-	return false;
+	if (can_instantiate) {
+		if (!preview_node->get_parent()) { // create preview only once
+			_create_preview(files);
+		}
+		ERR_FAIL_COND_V(preview_node->get_child_count() == 0, false);
+
+		Transform2D trans = canvas_item_editor->get_canvas_transform();
+		preview_node->set_position((p_point - trans.get_origin()) / trans.get_scale().x);
+		String scene_file_path = preview_node->get_child(0)->get_scene_file_path();
+		if (scene_file_path.is_empty() || preview_node->get_tree()->get_edited_scene_root()) {
+			double snap = EDITOR_GET("interface/inspector/default_float_step");
+			int snap_step_decimals = Math::range_step_decimals(snap);
+#define FORMAT(value) (TS->format_number(String::num(value, snap_step_decimals)))
+			Vector2 preview_node_pos = preview_node->get_global_position();
+			canvas_item_editor->message = TTR("Instantiating:") + " (" + FORMAT(preview_node_pos.x) + ", " + FORMAT(preview_node_pos.y) + ") px";
+			label->set_text(vformat(TTR("Adding %s..."), default_texture_node_type));
+		} else {
+			canvas_item_editor->message = TTR("Creating inherited scene from: ") + scene_file_path;
+		}
+
+		canvas_item_editor->update_viewport();
+	}
+	return can_instantiate;
 }
 
 void CanvasItemEditorViewport::_show_resource_type_selector() {
