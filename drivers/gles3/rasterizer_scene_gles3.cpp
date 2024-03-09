@@ -820,9 +820,6 @@ void RasterizerSceneGLES3::_draw_sky(RID p_env, const Projection &p_projection, 
 		float aspect = p_projection.get_aspect();
 
 		camera.set_perspective(environment_get_sky_custom_fov(p_env), aspect, near_plane, far_plane);
-		Projection correction;
-		correction.set_depth_correction(false, true, false);
-		camera = correction * camera;
 	} else {
 		camera = p_projection;
 	}
@@ -2175,9 +2172,7 @@ void RasterizerSceneGLES3::_render_shadow_pass(RID p_light, RID p_shadow_atlas, 
 		}
 
 		use_pancake = light_storage->light_get_param(base, RS::LIGHT_PARAM_SHADOW_PANCAKE_SIZE) > 0;
-		Projection correction;
-		correction.set_depth_correction(false, true, false, true);
-		light_projection = correction * light_storage->light_instance_get_shadow_camera(p_light, p_pass);
+		light_projection = light_storage->light_instance_get_shadow_camera(p_light, p_pass);
 		light_transform = light_storage->light_instance_get_shadow_transform(p_light, p_pass);
 
 		float directional_shadow_size = light_storage->directional_shadow_get_size();
@@ -2231,9 +2226,7 @@ void RasterizerSceneGLES3::_render_shadow_pass(RID p_light, RID p_shadow_atlas, 
 
 				glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, cube_map_faces[p_pass], shadow_texture, 0);
 
-				Projection correction;
-				correction.set_depth_correction(false, true, false, true);
-				light_projection = correction * light_storage->light_instance_get_shadow_camera(p_light, p_pass);
+				light_projection = light_storage->light_instance_get_shadow_camera(p_light, p_pass);
 				light_transform = light_storage->light_instance_get_shadow_transform(p_light, p_pass);
 				shadow_size = shadow_size / 2;
 			} else {
@@ -2243,9 +2236,7 @@ void RasterizerSceneGLES3::_render_shadow_pass(RID p_light, RID p_shadow_atlas, 
 			shadow_bias = light_storage->light_get_param(base, RS::LIGHT_PARAM_SHADOW_BIAS);
 
 		} else if (light_storage->light_get_type(base) == RS::LIGHT_SPOT) {
-			Projection correction;
-			correction.set_depth_correction(false, true, false, true);
-			light_projection = correction * light_storage->light_instance_get_shadow_camera(p_light, 0);
+			light_projection = light_storage->light_instance_get_shadow_camera(p_light, 0);
 			light_transform = light_storage->light_instance_get_shadow_transform(p_light, 0);
 
 			shadow_bias = light_storage->light_get_param(base, RS::LIGHT_PARAM_SHADOW_BIAS) / 10.0;
