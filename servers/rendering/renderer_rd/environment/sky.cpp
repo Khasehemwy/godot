@@ -1183,7 +1183,9 @@ void SkyRD::setup_sky(RID p_env, Ref<RenderSceneBuffersRD> p_render_buffers, con
 
 	// Our info in our UBO is only used if we're rendering stereo.
 	for (uint32_t i = 0; i < p_view_count; i++) {
-		Projection view_inv_projection = (correction * p_view_projections[i]).inverse();
+		Projection view_correction;
+		view_correction.add_jitter_offset(p_jitter);
+		Projection view_inv_projection = (view_correction * p_view_projections[i]).inverse();
 		if (p_view_count > 1) {
 			RendererRD::MaterialStorage::store_camera(p_cam_projection * view_inv_projection, sky_scene_state.ubo.combined_reprojection[i]);
 		} else {
