@@ -5,6 +5,7 @@ mode_color =
 mode_color_instancing = \n#define USE_INSTANCING
 mode_depth = #define MODE_RENDER_DEPTH
 mode_depth_instancing = #define MODE_RENDER_DEPTH \n#define USE_INSTANCING
+mode_normal = #define MODE_NORMAL
 
 #[specializations]
 
@@ -20,6 +21,7 @@ USE_LIGHTMAP = false
 USE_SH_LIGHTMAP = false
 USE_LIGHTMAP_CAPTURE = false
 USE_MULTIVIEW = false
+USE_SSAO = false
 RENDER_SHADOWS = false
 RENDER_SHADOWS_LINEAR = false
 SHADOW_MODE_PCF_5 = false
@@ -46,7 +48,7 @@ SECOND_REFLECTION_PROBE = false
 
 #include "stdlib_inc.glsl"
 
-#if !defined(MODE_RENDER_DEPTH) || defined(TANGENT_USED) || defined(NORMAL_MAP_USED) || defined(LIGHT_ANISOTROPY_USED) ||defined(LIGHT_CLEARCOAT_USED)
+#if !defined(MODE_RENDER_DEPTH) || defined(MODE_NORMAL) || defined(TANGENT_USED) || defined(NORMAL_MAP_USED) || defined(LIGHT_ANISOTROPY_USED) ||defined(LIGHT_CLEARCOAT_USED)
 #ifndef NORMAL_USED
 #define NORMAL_USED
 #endif
@@ -548,7 +550,7 @@ void main() {
 #define SPECULAR_SCHLICK_GGX
 #endif
 
-#if !defined(MODE_RENDER_DEPTH) || defined(TANGENT_USED) || defined(NORMAL_MAP_USED) || defined(LIGHT_ANISOTROPY_USED) ||defined(LIGHT_CLEARCOAT_USED)
+#if !defined(MODE_RENDER_DEPTH) || defined(MODE_NORMAL) || defined(TANGENT_USED) || defined(NORMAL_MAP_USED) || defined(LIGHT_ANISOTROPY_USED) ||defined(LIGHT_CLEARCOAT_USED)
 #ifndef NORMAL_USED
 #define NORMAL_USED
 #endif
@@ -560,7 +562,7 @@ void main() {
 #endif
 #endif // MODE_UNSHADED
 
-#ifndef MODE_RENDER_DEPTH
+#if !defined(MODE_RENDER_DEPTH)
 #include "tonemap_inc.glsl"
 #endif
 #include "stdlib_inc.glsl"
@@ -624,6 +626,8 @@ in highp vec4 shadow_coord3;
 in highp vec4 shadow_coord4;
 #endif //LIGHT_USE_PSSM4
 #endif
+
+uniform sampler2D ao_buffer; // texunit:-9
 
 #ifdef USE_RADIANCE_MAP
 
@@ -752,7 +756,7 @@ multiview_data;
 #define LIGHT_BAKE_STATIC 1u
 #define LIGHT_BAKE_DYNAMIC 2u
 
-#ifndef MODE_RENDER_DEPTH
+#if !defined(MODE_RENDER_DEPTH) && !defined(MODE_NORMAL)
 // Directional light data.
 #if !defined(DISABLE_LIGHT_DIRECTIONAL) || (!defined(ADDITIVE_OMNI) && !defined(ADDITIVE_SPOT))
 
@@ -974,7 +978,7 @@ vec3 F0(float metallic, float specular, vec3 albedo) {
 	// see https://google.github.io/filament/Filament.md.html
 	return mix(vec3(dielectric), albedo, vec3(metallic));
 }
-#ifndef MODE_RENDER_DEPTH
+#if !defined(MODE_RENDER_DEPTH) && !defined(MODE_NORMAL)
 #if !defined(DISABLE_LIGHT_DIRECTIONAL) || !defined(DISABLE_LIGHT_OMNI) || !defined(DISABLE_LIGHT_SPOT) || defined(USE_ADDITIVE_LIGHTING)
 
 float D_GGX(float cos_theta_m, float alpha) {
@@ -1545,7 +1549,7 @@ void main() {
 	}
 	alpha = 1.0;
 #else
-#ifdef MODE_RENDER_DEPTH
+#if defined(MODE_RENDER_DEPTH)
 #ifdef USE_OPAQUE_PREPASS
 
 	if (alpha < opaque_prepass_threshold) {
@@ -1578,7 +1582,7 @@ void main() {
 
 #endif
 
-#ifndef MODE_RENDER_DEPTH
+#if !defined(MODE_RENDER_DEPTH) && !defined(MODE_NORMAL)
 
 #ifndef FOG_DISABLED
 #ifndef CUSTOM_FOG_USED
@@ -1746,6 +1750,13 @@ void main() {
 #endif // USE_LIGHTMAP_CAPTURE
 #endif // !DISABLE_LIGHTMAP
 
+#if defined(USE_SSAO)
+	float ssao = textureLod(ao_buffer, screen_uv, 0.0).r;
+	ssao = pow(ssao, 2.0);
+//	ssao = mix(0.0, 0.6, smoothstep(0.0, 0.9999, ssao)) * step(ssao, 0.9999) + ssao * step(0.9999, ssao);
+	ao = min(ao, ssao);
+#endif // USE_SSAO
+	
 	{
 #if defined(AMBIENT_LIGHT_DISABLED)
 		ambient_light = vec3(0.0, 0.0, 0.0);
@@ -1756,7 +1767,7 @@ void main() {
 	}
 
 	// convert ao to direct light ao
-	ao = mix(1.0, ao, ao_light_affect);
+//	ao = mix(1.0, ao, ao_light_affect);
 
 	{
 #if defined(DIFFUSE_TOON)
@@ -1867,7 +1878,7 @@ void main() {
 #endif // !MODE_RENDER_DEPTH
 
 #if defined(USE_SHADOW_TO_OPACITY)
-#ifndef MODE_RENDER_DEPTH
+#if !defined(MODE_RENDER_DEPTH) && !defined(MODE_NORMAL)
 	alpha = min(alpha, clamp(length(ambient_light), 0.0, 1.0));
 
 #if defined(ALPHA_SCISSOR_USED)
@@ -1887,6 +1898,10 @@ void main() {
 
 // Nothing happens, so a tree-ssa optimizer will result in no fragment shader :)
 #else // !MODE_RENDER_DEPTH
+	
+#ifdef MODE_NORMAL
+	frag_color = vec4(normal * 0.5 + 0.5, 0.0);
+#else
 
 #ifdef RENDER_MATERIAL
 
@@ -1914,6 +1929,9 @@ void main() {
 	diffuse_light *= 1.0 - metallic;
 	ambient_light *= 1.0 - metallic;
 
+	diffuse_light *= ao;
+	specular_light *= ao;
+	
 	frag_color = vec4(diffuse_light + specular_light, alpha);
 	frag_color.rgb += emission + ambient_light;
 #endif //!MODE_UNSHADED
@@ -2121,6 +2139,9 @@ void main() {
 
 #endif // ADDITIVE_SPOT
 
+	diffuse_light *= ao;
+	specular_light *= ao;
+	
 	diffuse_light *= albedo;
 	diffuse_light *= 1.0 - metallic;
 	vec3 additive_light_color = diffuse_light + specular_light;
@@ -2142,8 +2163,8 @@ void main() {
 	frag_color.rgb += additive_light_color;
 #endif // USE_ADDITIVE_LIGHTING
 	frag_color.rgb *= scene_data.luminance_multiplier;
-
 #endif // !RENDER_MATERIAL
+#endif // !MODE_NORMAL
 #endif // !MODE_RENDER_DEPTH
 
 #ifdef PREMUL_ALPHA_USED

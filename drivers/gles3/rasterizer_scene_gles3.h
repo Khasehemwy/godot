@@ -62,6 +62,7 @@ enum PassMode {
 	PASS_MODE_SHADOW,
 	PASS_MODE_DEPTH,
 	PASS_MODE_MATERIAL,
+	PASS_MODE_NORMAL,
 };
 
 // These should share as much as possible with SkyUniform Location
@@ -669,13 +670,6 @@ protected:
 	mutable RID_Owner<CameraAttributes, true> camera_attributes_owner;
 
 	/* Environment */
-
-	RS::EnvironmentSSAOQuality ssao_quality = RS::ENV_SSAO_QUALITY_MEDIUM;
-	bool ssao_half_size = false;
-	float ssao_adaptive_target = 0.5;
-	int ssao_blur_passes = 2;
-	float ssao_fadeout_from = 50.0;
-	float ssao_fadeout_to = 300.0;
 
 	bool glow_bicubic_upscale = false;
 	RS::EnvironmentSSRRoughnessQuality ssr_roughness_quality = RS::ENV_SSR_ROUGHNESS_QUALITY_LOW;

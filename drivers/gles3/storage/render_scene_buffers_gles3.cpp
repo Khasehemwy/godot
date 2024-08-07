@@ -610,6 +610,104 @@ void RenderSceneBuffersGLES3::check_glow_buffers() {
 	glBindFramebuffer(GL_FRAMEBUFFER, GLES3::TextureStorage::system_fbo);
 }
 
+void RenderSceneBuffersGLES3::check_ssao_buffers(const GLES3::SSAO::SSAORenderBufferProperty &p_ssao_buffers) {
+	Size2i full_size = Size2i(p_ssao_buffers.buffer_width, p_ssao_buffers.buffer_height);
+	Size2i half_size = Size2i(p_ssao_buffers.half_buffer_width, p_ssao_buffers.half_buffer_height);
+
+	GLES3::TextureStorage *texture_storage = GLES3::TextureStorage::get_singleton();
+
+	auto create_texture = [&](const StringName &p_texture_name, GLES3::SSAO::SSAOBuffer *p_buffer, GLenum p_internal_format, GLenum p_format, uint32_t p_format_size, GLenum p_type, Size2i p_size, const uint32_t &p_layers, bool p_bind_depth = false) {
+		Size2i size = p_size == Size2i(0, 0) ? internal_size : p_size;
+		uint32_t layers = p_layers == 0 ? view_count : p_layers;
+
+		if (layers > 1) {
+			if (p_buffer->size == size && p_buffer->color != 0) {
+				return;
+			}
+			p_buffer->size = size;
+
+			glGenTextures(1, &p_buffer->color);
+			glActiveTexture(GL_TEXTURE0);
+			glBindTexture(GL_TEXTURE_2D_ARRAY, p_buffer->color);
+
+			glTexImage3D(GL_TEXTURE_2D_ARRAY, 0, p_internal_format, size.x, size.y, layers, 0, p_format, p_type, nullptr);
+
+			glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+			glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+			glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+			glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+			glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_BASE_LEVEL, 0);
+			glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAX_LEVEL, 0);
+
+			GLES3::Utilities::get_singleton()->texture_allocated_data(p_buffer->color, size.x * size.y * p_format_size * layers, p_texture_name);
+
+			glGenFramebuffers(1, &p_buffer->fbo);
+			glBindFramebuffer(GL_FRAMEBUFFER, p_buffer->fbo);
+
+			glFramebufferTextureLayer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, p_buffer->color, 0, 0);
+			if (p_bind_depth) {
+				glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, GLES3::TextureStorage::get_singleton()->render_target_get_depth(render_target), 0);
+			}
+
+			GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+			if (status != GL_FRAMEBUFFER_COMPLETE) {
+				WARN_PRINT("Could not create ssao buffer " + p_texture_name + ", status: " + texture_storage->get_framebuffer_error(status));
+				_clear_ssao_buffers();
+			}
+
+			// glBindTexture(GL_TEXTURE_2D, 0);
+			glBindTexture(GL_TEXTURE_2D_ARRAY, 0);
+			glBindFramebuffer(GL_FRAMEBUFFER, GLES3::TextureStorage::system_fbo);
+		} else {
+			if (p_buffer->size == size && p_buffer->color != 0) {
+				return;
+			}
+			p_buffer->size = size;
+
+			glGenTextures(1, &p_buffer->color);
+			glActiveTexture(GL_TEXTURE0);
+			glBindTexture(GL_TEXTURE_2D, p_buffer->color);
+
+			glTexImage2D(GL_TEXTURE_2D, 0, p_internal_format, size.x, size.y, 0, p_format, p_type, nullptr);
+
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 0);
+
+			GLES3::Utilities::get_singleton()->texture_allocated_data(p_buffer->color, size.x * size.y * p_format_size, p_texture_name);
+
+			glGenFramebuffers(1, &p_buffer->fbo);
+			glBindFramebuffer(GL_FRAMEBUFFER, p_buffer->fbo);
+
+			glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, p_buffer->color, 0);
+			if (p_bind_depth) {
+				glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, GLES3::TextureStorage::get_singleton()->render_target_get_depth(render_target), 0);
+			}
+
+			GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+			if (status != GL_FRAMEBUFFER_COMPLETE) {
+				WARN_PRINT("Could not create ssao buffer " + p_texture_name + ", status: " + texture_storage->get_framebuffer_error(status));
+				_clear_ssao_buffers();
+			}
+
+			glBindTexture(GL_TEXTURE_2D, 0);
+			glBindFramebuffer(GL_FRAMEBUFFER, GLES3::TextureStorage::system_fbo);
+		}
+	};
+
+	create_texture(RB_DEINTERLEAVED, &ssao.deinterleaved, GL_RG8, GL_RG, 2, GL_UNSIGNED_BYTE, full_size, 4 * view_count);
+	create_texture(RB_DEINTERLEAVED_PONG, &ssao.deinterleaved_pong, GL_RG8, GL_RG, 2, GL_UNSIGNED_BYTE, full_size, 4 * view_count);
+	create_texture(RB_IMPORTANCE_MAP, &ssao.importance_map, GL_R8, GL_RED, 1, GL_UNSIGNED_BYTE, half_size, 0);
+	create_texture(RB_IMPORTANCE_PONG, &ssao.importance_pong, GL_R8, GL_RED, 1, GL_UNSIGNED_BYTE, half_size, 0);
+	create_texture(RB_FINAL, &ssao.final, GL_R8, GL_RED, 1, GL_UNSIGNED_BYTE, internal_size, 0);
+	create_texture(RB_NORMAL, &ssao.normal, GL_RGB8, GL_RGB, 3, GL_UNSIGNED_BYTE, internal_size, 0, true);
+}
+
 void RenderSceneBuffersGLES3::_clear_glow_buffers() {
 	for (int i = 0; i < 4; i++) {
 		if (glow.levels[i].fbo != 0) {
@@ -624,11 +722,46 @@ void RenderSceneBuffersGLES3::_clear_glow_buffers() {
 	}
 }
 
+void RenderSceneBuffersGLES3::_clear_ssao_buffers() {
+	glDeleteFramebuffers(1, &ssao.deinterleaved.fbo);
+	glDeleteFramebuffers(1, &ssao.deinterleaved_pong.fbo);
+	glDeleteFramebuffers(1, &ssao.importance_map.fbo);
+	glDeleteFramebuffers(1, &ssao.importance_pong.fbo);
+	glDeleteFramebuffers(1, &ssao.final.fbo);
+	glDeleteFramebuffers(1, &ssao.normal.fbo);
+
+	if (ssao.deinterleaved.color != 0) {
+		GLES3::Utilities::get_singleton()->texture_free_data(ssao.deinterleaved.color);
+		ssao.deinterleaved.color = 0;
+	}
+	if (ssao.deinterleaved_pong.color != 0) {
+		GLES3::Utilities::get_singleton()->texture_free_data(ssao.deinterleaved_pong.color);
+		ssao.deinterleaved_pong.color = 0;
+	}
+	if (ssao.importance_map.color != 0) {
+		GLES3::Utilities::get_singleton()->texture_free_data(ssao.importance_map.color);
+		ssao.importance_map.color = 0;
+	}
+	if (ssao.importance_pong.color != 0) {
+		GLES3::Utilities::get_singleton()->texture_free_data(ssao.importance_pong.color);
+		ssao.importance_pong.color = 0;
+	}
+	if (ssao.final.color != 0) {
+		GLES3::Utilities::get_singleton()->texture_free_data(ssao.final.color);
+		ssao.final.color = 0;
+	}
+	if (ssao.normal.color != 0) {
+		GLES3::Utilities::get_singleton()->texture_free_data(ssao.normal.color);
+		ssao.normal.color = 0;
+	}
+}
+
 void RenderSceneBuffersGLES3::free_render_buffer_data() {
 	_clear_msaa3d_buffers();
 	_clear_intermediate_buffers();
 	_clear_back_buffers();
 	_clear_glow_buffers();
+	_clear_ssao_buffers();
 }
 
 GLuint RenderSceneBuffersGLES3::get_render_fbo() {
