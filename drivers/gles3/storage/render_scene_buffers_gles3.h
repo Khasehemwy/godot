@@ -34,6 +34,7 @@
 #ifdef GLES3_ENABLED
 
 #include "drivers/gles3/effects/glow.h"
+#include "drivers/gles3/effects/SSAO.h"
 #include "servers/rendering/storage/render_scene_buffers.h"
 
 #include "platform_gl.h"
@@ -87,12 +88,15 @@ public:
 		GLES3::Glow::GLOWLEVEL levels[4];
 	} glow;
 
+	GLES3::SSAO::Buffers ssao;
+
 private:
 	void _check_render_buffers();
 	void _clear_msaa3d_buffers();
 	void _clear_intermediate_buffers();
 	void _clear_back_buffers();
 	void _clear_glow_buffers();
+	void _clear_ssao_buffers();
 
 	void _rt_attach_textures(GLuint p_color, GLuint p_depth, GLsizei p_samples, uint32_t p_view_count);
 	GLuint _rt_get_cached_fbo(GLuint p_color, GLuint p_depth, GLsizei p_samples, uint32_t p_view_count);
@@ -112,6 +116,7 @@ public:
 
 	void check_backbuffer(bool p_need_color, bool p_need_depth); // Check if we need to initialize our backbuffer.
 	void check_glow_buffers(); // Check if we need to initialize our glow buffers.
+	void check_ssao_buffers(const GLES3::SSAO::SSAORenderBufferProperty &p_ssao_buffers);
 
 	GLuint get_render_fbo();
 	GLuint get_msaa3d_fbo() {

@@ -73,6 +73,7 @@ protected:
 	GLES3::CopyEffects *copy_effects = nullptr;
 	GLES3::CubemapFilter *cubemap_filter = nullptr;
 	GLES3::Glow *glow = nullptr;
+	GLES3::SSAO *ssao = nullptr;
 	GLES3::PostEffects *post_effects = nullptr;
 	RasterizerCanvasGLES3 *canvas = nullptr;
 	RasterizerSceneGLES3 *scene = nullptr;

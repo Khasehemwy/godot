@@ -356,6 +356,7 @@ RasterizerGLES3::RasterizerGLES3() {
 	copy_effects = memnew(GLES3::CopyEffects);
 	cubemap_filter = memnew(GLES3::CubemapFilter);
 	glow = memnew(GLES3::Glow);
+	ssao = memnew(GLES3::SSAO);
 	post_effects = memnew(GLES3::PostEffects);
 	gi = memnew(GLES3::GI);
 	fog = memnew(GLES3::Fog);
